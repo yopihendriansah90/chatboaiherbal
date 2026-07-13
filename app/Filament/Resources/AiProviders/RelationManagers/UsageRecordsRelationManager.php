@@ -29,6 +29,8 @@ class UsageRecordsRelationManager extends RelationManager
     {
         return $table
             ->defaultSort('occurred_at', 'desc')
+            ->defaultKeySort()
+            ->poll('5s')
             ->emptyStateHeading('Belum ada penggunaan')
             ->emptyStateDescription('Usage akan muncul setelah provider ini menerima request parser atau renderer.')
             ->columns([
@@ -40,7 +42,7 @@ class UsageRecordsRelationManager extends RelationManager
                 TextColumn::make('output_tokens')->label('Output')->numeric()->placeholder('-')->sortable(),
                 TextColumn::make('reasoning_tokens')->label('Reasoning')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('total_tokens')->label('Total')->numeric()->weight('bold')->placeholder('-')->sortable(),
-                TextColumn::make('total_cost_idr')->label('Estimasi biaya')->money('IDR', decimalPlaces: 4)->placeholder('Belum dihitung')->sortable(),
+                TextColumn::make('total_cost_idr')->label('Estimasi biaya')->money('IDR', decimalPlaces: 2)->placeholder('Belum dihitung')->sortable(),
                 TextColumn::make('latency_ms')->label('Latency')->numeric()->suffix(' ms')->placeholder('-')->sortable(),
                 IconColumn::make('successful')->label('HTTP berhasil')->boolean(),
                 TextColumn::make('error_code')->label('Error')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),

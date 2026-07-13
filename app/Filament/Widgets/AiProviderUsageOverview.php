@@ -38,7 +38,7 @@ class AiProviderUsageOverview extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-bolt')
                 ->color('primary'),
             Stat::make('Estimasi biaya', 'Rp '.number_format((float) (clone $month)->sum('total_cost_idr'), 2, ',', '.'))
-                ->description('$'.number_format((float) (clone $month)->sum('total_cost_usd'), 6).' bulan ini')
+                ->description('$'.number_format((float) (clone $month)->sum('total_cost_usd'), 2, ',', '.').' bulan ini')
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('success'),
             Stat::make('Keberhasilan HTTP', ($requests > 0 ? number_format(($successful / $requests) * 100, 1, ',', '.') : '0,0').'%')

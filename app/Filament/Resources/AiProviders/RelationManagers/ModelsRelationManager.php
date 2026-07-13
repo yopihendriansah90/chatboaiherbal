@@ -14,6 +14,8 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Text;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -109,7 +111,7 @@ class ModelsRelationManager extends RelationManager
                         $price = $record->currentPrice();
 
                         return $price
-                            ? 'Input $'.number_format((float) $price->input_price_per_million_usd, 6).' · Output $'.number_format((float) $price->output_price_per_million_usd, 6)
+                            ? 'Input $'.number_format((float) $price->input_price_per_million_usd, 2, '.', ',').' · Output $'.number_format((float) $price->output_price_per_million_usd, 2, '.', ',')
                             : null;
                     })
                     ->placeholder('Harga belum diatur')
@@ -165,12 +167,44 @@ class ModelsRelationManager extends RelationManager
 
     private function priceSchema(): array
     {
+        $rate = ExchangeRate::current();
+
         return [
-            TextInput::make('input_price_per_million_usd')->label('Input / 1 juta token')->prefix('$')->numeric()->minValue(0)->step(0.00000001)->required(),
-            TextInput::make('cached_input_price_per_million_usd')->label('Cached input / 1 juta token')->prefix('$')->numeric()->minValue(0)->step(0.00000001),
-            TextInput::make('output_price_per_million_usd')->label('Output / 1 juta token')->prefix('$')->numeric()->minValue(0)->step(0.00000001)->required(),
+            Text::make($rate
+                ? 'Mata uang harga provider: USD. Konversi menggunakan kurs terbaru 1 USD = Rp'.number_format((float) $rate->rate, 2, ',', '.').'.'
+                : 'Mata uang harga provider: USD. Tambahkan Nilai Dolar agar estimasi IDR dapat ditampilkan.')
+                ->columnSpanFull(),
+            TextInput::make('input_price_per_million_usd')
+                ->label('Input / 1 juta token')
+                ->prefix('USD')
+                ->numeric()->minValue(0)->step(0.00000001)->required()
+                ->live(debounce: 500)
+                ->helperText(fn (Get $get): string => $this->idrEstimate($get('input_price_per_million_usd'), $rate)),
+            TextInput::make('cached_input_price_per_million_usd')
+                ->label('Cached input / 1 juta token')
+                ->prefix('USD')
+                ->numeric()->minValue(0)->step(0.00000001)
+                ->live(debounce: 500)
+                ->helperText(fn (Get $get): string => filled($get('cached_input_price_per_million_usd'))
+                    ? $this->idrEstimate($get('cached_input_price_per_million_usd'), $rate)
+                    : 'Kosongkan jika provider tidak memberikan harga cached input.'),
+            TextInput::make('output_price_per_million_usd')
+                ->label('Output / 1 juta token')
+                ->prefix('USD')
+                ->numeric()->minValue(0)->step(0.00000001)->required()
+                ->live(debounce: 500)
+                ->helperText(fn (Get $get): string => $this->idrEstimate($get('output_price_per_million_usd'), $rate)),
             DateTimePicker::make('effective_at')->label('Berlaku sejak')->seconds(false)->maxDate(now())->default(now())->required(),
             TextInput::make('source_url')->label('URL harga resmi')->url()->maxLength(2048),
         ];
+    }
+
+    private function idrEstimate(mixed $usd, ?ExchangeRate $rate): string
+    {
+        if (! is_numeric($usd) || ! $rate) {
+            return 'Estimasi IDR akan memakai Nilai Dolar terbaru.';
+        }
+
+        return 'Setara Rp'.number_format((float) $usd * (float) $rate->rate, 2, ',', '.').' per 1 juta token.';
     }
 }

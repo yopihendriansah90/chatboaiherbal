@@ -42,6 +42,8 @@ class AiUsageRecordResource extends Resource
     {
         return $table
             ->defaultSort('occurred_at', 'desc')
+            ->defaultKeySort()
+            ->poll('5s')
             ->columns([
                 TextColumn::make('occurred_at')->label('Waktu')->dateTime('d M Y H:i:s')->sortable(),
                 TextColumn::make('provider')->label('Provider')->badge()->searchable()->sortable(),
@@ -52,8 +54,8 @@ class AiUsageRecordResource extends Resource
                 TextColumn::make('output_tokens')->label('Output')->numeric()->placeholder('-')->sortable(),
                 TextColumn::make('reasoning_tokens')->label('Reasoning')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('total_tokens')->label('Total token')->numeric()->weight('bold')->placeholder('-')->sortable(),
-                TextColumn::make('total_cost_usd')->label('Estimasi USD')->money('USD', decimalPlaces: 8)->placeholder('Harga belum diatur')->sortable(),
-                TextColumn::make('total_cost_idr')->label('Estimasi IDR')->money('IDR', decimalPlaces: 4)->placeholder('Kurs belum diatur')->sortable(),
+                TextColumn::make('total_cost_usd')->label('Estimasi USD')->money('USD', decimalPlaces: 2)->placeholder('Harga belum diatur')->sortable(),
+                TextColumn::make('total_cost_idr')->label('Estimasi IDR')->money('IDR', decimalPlaces: 2)->placeholder('Kurs belum diatur')->sortable(),
                 TextColumn::make('latency_ms')->label('Latency')->suffix(' ms')->numeric()->placeholder('-')->sortable()->toggleable(),
                 IconColumn::make('successful')->label('Berhasil')->boolean(),
                 TextColumn::make('status_code')->label('HTTP')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),

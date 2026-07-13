@@ -75,9 +75,9 @@ class AiModelPriceResource extends Resource
             ->columns([
                 TextColumn::make('provider.name')->label('Provider')->badge()->searchable(),
                 TextColumn::make('model')->searchable()->weight('bold'),
-                TextColumn::make('input_price_per_million_usd')->label('Input / 1M')->money('USD', decimalPlaces: 8),
-                TextColumn::make('cached_input_price_per_million_usd')->label('Cached / 1M')->money('USD', decimalPlaces: 8)->placeholder('Sama dengan input'),
-                TextColumn::make('output_price_per_million_usd')->label('Output / 1M')->money('USD', decimalPlaces: 8),
+                TextColumn::make('input_price_per_million_usd')->label('Input / 1M')->money('USD', decimalPlaces: 2),
+                TextColumn::make('cached_input_price_per_million_usd')->label('Cached / 1M')->money('USD', decimalPlaces: 2)->placeholder('Sama dengan input'),
+                TextColumn::make('output_price_per_million_usd')->label('Output / 1M')->money('USD', decimalPlaces: 2),
                 TextColumn::make('effective_at')->label('Berlaku sejak')->dateTime('d M Y H:i'),
                 IconColumn::make('is_active')->label('Aktif')->boolean(),
                 TextColumn::make('updatedBy.name')->label('Diperbarui oleh')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),

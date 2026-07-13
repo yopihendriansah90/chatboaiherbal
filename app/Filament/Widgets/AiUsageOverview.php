@@ -29,7 +29,7 @@ class AiUsageOverview extends StatsOverviewWidget
                 ->description($monthRequests.' attempt termasuk fallback')
                 ->descriptionIcon('heroicon-m-chart-bar-square'),
             Stat::make('Estimasi biaya bulan ini', 'Rp '.number_format((float) (clone $month)->sum('total_cost_idr'), 2, ',', '.'))
-                ->description('$'.number_format((float) (clone $month)->sum('total_cost_usd'), 6))
+                ->description('$'.number_format((float) (clone $month)->sum('total_cost_usd'), 2, ',', '.'))
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('success'),
             Stat::make('Keberhasilan API', number_format($successRate, 1, ',', '.').'%')
