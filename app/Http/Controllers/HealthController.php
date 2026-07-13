@@ -3,13 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Repositories\ProductRepository;
+use App\Services\AiProviderResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 use Throwable;
 
 class HealthController extends Controller
 {
-    public function __invoke(ProductRepository $products): JsonResponse
+    public function __invoke(ProductRepository $products, AiProviderResolver $providers): JsonResponse
     {
         $checks = [
             'application' => 'ok',
@@ -19,11 +20,13 @@ class HealthController extends Controller
                 'configured' => $this->telegramConfigured(),
             ],
             'ai_parser' => [
-                'configured' => $this->parserConfigured(),
+                'provider' => config('chatbot.parser_provider'),
+                'configured' => $this->parserConfigured($providers),
             ],
             'natural_renderer' => [
                 'enabled' => (bool) config('chatbot.natural_renderer'),
-                'configured' => $this->rendererConfigured(),
+                'provider' => config('chatbot.renderer_provider'),
+                'configured' => $this->rendererConfigured($providers),
             ],
         ];
 
@@ -68,16 +71,18 @@ class HealthController extends Controller
             && filled(config('services.telegram.webhook_url'));
     }
 
-    private function parserConfigured(): bool
+    private function parserConfigured(AiProviderResolver $providers): bool
     {
-        return filled(config('services.groq.api_key'))
-            && filled(config('services.groq.parser_model'));
+        $provider = $providers->find((string) config('chatbot.parser_provider', 'groq'));
+
+        return filled($provider?->api_key) && filled($provider?->parser_model);
     }
 
-    private function rendererConfigured(): bool
+    private function rendererConfigured(AiProviderResolver $providers): bool
     {
-        return ! config('chatbot.natural_renderer')
-            || (filled(config('services.groq.api_key')) && filled(config('services.groq.renderer_model')));
+        $provider = $providers->renderer();
+
+        return ! config('chatbot.natural_renderer') || (filled($provider?->api_key) && filled($provider?->renderer_model));
     }
 
     private function status(array $checks): string

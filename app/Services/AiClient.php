@@ -2,51 +2,60 @@
 
 namespace App\Services;
 
-use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
+use Throwable;
 
 class AiClient
 {
     public function __construct(
         private GeminiClient $gemini,
         private GroqClient $groq,
-    ) {}
+        private ?OpenAiClient $openai = null,
+        private ?AiProviderResolver $providers = null,
+    ) {
+        $this->openai ??= app(OpenAiClient::class);
+        $this->providers ??= app(AiProviderResolver::class);
+    }
 
     public function respond(string $message, array $state): array
     {
-        $provider = strtolower((string) config('chatbot.ai_provider', 'groq'));
+        $candidates = config('chatbot.ai_provider') === 'auto'
+            ? ['gemini', 'groq', 'openai']
+            : $this->providers->parserCandidates();
+        $lastException = null;
 
-        if ($provider === 'groq') {
-            return $this->groq->respond($message, $state);
-        }
-
-        if ($provider === 'gemini') {
-            return $this->gemini->respond($message, $state);
-        }
-
-        if ($provider !== 'auto') {
-            throw new RuntimeException("AI_PROVIDER tidak valid: {$provider}.");
-        }
-
-        try {
-            return $this->gemini->respond($message, $state);
-        } catch (RequestException $exception) {
-            if ($exception->response->status() !== 429) {
-                throw $exception;
+        foreach ($candidates as $providerName) {
+            if ($this->providers->circuitOpen($providerName)) {
+                continue;
             }
 
-            Log::notice('Switching AI provider from Gemini to Groq', ['reason' => 'quota_exhausted']);
-
-            return $this->groq->respond($message, $state);
-        } catch (RuntimeException $exception) {
-            if ($exception->getMessage() !== 'GEMINI_API_KEY belum dikonfigurasi.') {
-                throw $exception;
+            $provider = $this->providers->find($providerName);
+            if (! $provider) {
+                continue;
             }
 
-            Log::notice('Switching AI provider from Gemini to Groq', ['reason' => 'gemini_key_missing']);
+            try {
+                $result = match ($providerName) {
+                    'groq' => $this->groq->respond($message, $state, $provider),
+                    'gemini' => $this->gemini->respond($message, $state, $provider),
+                    'openai' => $this->openai->respond($message, $state, $provider),
+                    default => throw new RuntimeException("Provider AI tidak dikenal: {$providerName}"),
+                };
+                $this->providers->recordSuccess($providerName);
+                config(['chatbot.active_parser_provider' => $providerName]);
 
-            return $this->groq->respond($message, $state);
+                return $result;
+            } catch (Throwable $exception) {
+                $lastException = $exception;
+                $this->providers->recordFailure($providerName);
+                Log::notice('Switching AI parser provider', [
+                    'provider' => $providerName,
+                    'reason' => $exception::class,
+                ]);
+            }
         }
+
+        throw $lastException ?? new RuntimeException('Tidak ada AI parser yang tersedia.');
     }
 }

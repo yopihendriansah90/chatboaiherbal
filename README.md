@@ -83,6 +83,34 @@ Header `X-Internal-Health-Token` juga didukung. Respons internal berisi versi ru
 
 Informasi yang sama tersedia langsung di panel Filament pada `/admin/system-health`. Halaman **Status Sistem** hanya dapat dibuka setelah login admin, tersedia di grup navigasi **Operasional**, dan memiliki tombol **Perbarui status**. Endpoint internal tetap dipertahankan untuk health checker atau integrasi monitoring mesin.
 
+### Pengaturan bot melalui Filament
+
+Admin dapat membuka `/admin/bot-settings` atau menu **Operasional → Pengaturan Bot** untuk mengelola Telegram, routing AI, natural renderer, dan memori percakapan. Token Telegram dan webhook secret disimpan terenkripsi di tabel `bot_settings`, sedangkan API key AI disimpan terenkripsi per provider di tabel `ai_providers`. Input secret yang dibiarkan kosong mempertahankan nilai lama.
+
+Konfigurasi database yang aktif menggantikan nilai `.env`, sementara `.env` tetap menjadi fallback untuk secret yang belum disimpan. Halaman menyediakan action untuk menguji Telegram/Groq serta memeriksa, memasang, dan menghapus webhook. Jalankan migrasi sebelum menggunakan halaman:
+
+```bash
+php artisan migrate
+```
+
+### Multi-provider AI
+
+Menu **Operasional → AI Providers** (`/admin/ai-providers`) mengelola Groq, OpenAI, dan Gemini. Setiap API key disimpan terenkripsi dan tidak pernah dimuat kembali ke form. Model parser, model renderer, timeout, status aktif, prioritas, hasil uji koneksi, serta latency dapat diatur per provider.
+
+Provider parser utama, provider renderer utama, dan urutan fallback dipilih pada `/admin/bot-settings`. Parser mencoba provider berikutnya ketika provider utama timeout, terkena rate limit, menghasilkan JSON invalid, atau tidak tersedia. Setelah tiga kegagalan, circuit breaker melewati provider tersebut selama lima menit. Renderer tidak memakai fallback lintas provider; kegagalan renderer langsung memakai template Laravel.
+
+Fallback `.env` untuk deployment baru:
+
+```dotenv
+AI_PARSER_PROVIDER=groq
+AI_RENDERER_PROVIDER=groq
+AI_PARSER_FALLBACK=true
+AI_PARSER_FALLBACK_ORDER=groq,openai,gemini
+OPENAI_API_KEY=
+OPENAI_PARSER_MODEL=gpt-5.4-mini
+OPENAI_RENDERER_MODEL=gpt-5.4-mini
+```
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

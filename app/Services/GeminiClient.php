@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AiProvider;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
@@ -13,9 +14,9 @@ class GeminiClient
 {
     public function __construct(private HerbalPrompt $prompt) {}
 
-    public function respond(string $message, array $state): array
+    public function respond(string $message, array $state, ?AiProvider $provider = null): array
     {
-        $key = config('services.gemini.api_key');
+        $key = $provider?->api_key ?: config('services.gemini.api_key');
         if (! is_string($key) || $key === '') {
             throw new RuntimeException('GEMINI_API_KEY belum dikonfigurasi.');
         }
@@ -24,7 +25,7 @@ class GeminiClient
 
         for ($attempt = 1; $attempt <= 2; $attempt++) {
             try {
-                return $this->request($key, $message, $state);
+                return $this->request($key, $message, $state, $provider);
             } catch (Throwable $exception) {
                 $lastException = $exception;
                 $response = $exception instanceof RequestException ? $exception->response : null;
@@ -55,16 +56,18 @@ class GeminiClient
             ->timeout((int) config('services.gemini.timeout', 25));
     }
 
-    private function request(string $key, string $message, array $state): array
+    private function request(string $key, string $message, array $state, ?AiProvider $provider): array
     {
-        $model = rawurlencode((string) config('services.gemini.model'));
+        $model = rawurlencode((string) ($provider?->parser_model ?: config('services.gemini.model')));
         $response = $this->http()
+            ->timeout((int) ($provider?->parser_timeout ?: config('services.gemini.timeout', 25)))
             ->withHeader('x-goog-api-key', $key)
             ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
                 'system_instruction' => ['parts' => [['text' => $this->prompt->instruction($state, $message)]]],
                 'contents' => [['role' => 'user', 'parts' => [['text' => $message]]]],
                 'generationConfig' => [
                     'responseMimeType' => 'application/json',
+                    'responseJsonSchema' => $this->prompt->jsonSchema(),
                     'maxOutputTokens' => 600,
                 ],
             ])->throw();

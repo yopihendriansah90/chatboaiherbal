@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AiProvider;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,9 +13,9 @@ class GroqClient
 {
     public function __construct(private HerbalPrompt $prompt) {}
 
-    public function respond(string $message, array $state): array
+    public function respond(string $message, array $state, ?AiProvider $provider = null): array
     {
-        $key = config('services.groq.api_key');
+        $key = $provider?->api_key ?: config('services.groq.api_key');
         if (! is_string($key) || $key === '') {
             throw new RuntimeException('GROQ_API_KEY belum dikonfigurasi.');
         }
@@ -22,7 +23,7 @@ class GroqClient
         $lastException = null;
         for ($attempt = 1; $attempt <= 2; $attempt++) {
             try {
-                return $this->request($key, $message, $state);
+                return $this->request($key, $message, $state, $provider);
             } catch (Throwable $exception) {
                 $lastException = $exception;
                 $response = $exception instanceof RequestException ? $exception->response : null;
@@ -35,7 +36,8 @@ class GroqClient
 
                 $apiCode = $response?->json('error.code');
                 $jsonValidationFailed = $response?->status() === 400 && $apiCode === 'json_validate_failed';
-                $shouldRetry = ! $response || $response->serverError() || $response->status() === 429 || $jsonValidationFailed;
+                $rateLimitedWithoutFallback = $response?->status() === 429 && ! config('chatbot.parser_fallback_enabled', true);
+                $shouldRetry = ! $response || $response->serverError() || $rateLimitedWithoutFallback || $jsonValidationFailed;
                 if ($attempt < 2 && $shouldRetry) {
                     if ($response?->status() === 429) {
                         $delay = min(10, max(1, (int) ceil((float) $response->header('retry-after'))));
@@ -54,14 +56,14 @@ class GroqClient
         throw $lastException ?? new RuntimeException('Groq gagal memberikan jawaban.');
     }
 
-    private function request(string $key, string $message, array $state): array
+    private function request(string $key, string $message, array $state, ?AiProvider $provider): array
     {
         $messages = array_merge(
             [['role' => 'system', 'content' => $this->prompt->instruction($state, $message)]],
             $this->prompt->messages($message, array_slice($state['history'] ?? [], -6)),
         );
 
-        $model = (string) config('services.groq.parser_model');
+        $model = (string) ($provider?->parser_model ?: config('services.groq.parser_model'));
         $payload = [
             'model' => $model,
             'messages' => $messages,
@@ -85,7 +87,7 @@ class GroqClient
             ->asJson()
             ->withToken($key)
             ->connectTimeout(5)
-            ->timeout((int) config('services.groq.timeout', 25))
+            ->timeout((int) ($provider?->parser_timeout ?: config('services.groq.timeout', 25)))
             ->post('https://api.groq.com/openai/v1/chat/completions', $payload)
             ->throw();
 

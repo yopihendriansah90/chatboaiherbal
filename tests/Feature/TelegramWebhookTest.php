@@ -17,6 +17,9 @@ class TelegramWebhookTest extends TestCase
             'services.telegram.webhook_secret' => 'test-secret',
             'services.groq.api_key' => 'test-groq-key',
             'chatbot.ai_provider' => 'groq',
+            'chatbot.parser_provider' => 'groq',
+            'chatbot.renderer_provider' => 'groq',
+            'chatbot.parser_fallback_enabled' => false,
             'chatbot.natural_renderer' => false,
             'cache.default' => 'array',
         ]);

@@ -73,7 +73,7 @@ class HerbalChatbot
             'intent' => $parsed->intent,
             'category' => $parsed->category,
             'confidence' => $parsed->confidence,
-            'model' => config('services.groq.parser_model'),
+            'provider' => config('chatbot.active_parser_provider', config('chatbot.parser_provider')),
             'latency_ms' => (int) ((hrtime(true) - $parserStartedAt) / 1_000_000),
         ]);
 

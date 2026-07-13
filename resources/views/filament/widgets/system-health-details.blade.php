@@ -15,13 +15,15 @@
                 'Timeout' => data_get($health, 'telegram.timeout_seconds', 0).' detik',
             ],
             'Model AI' => [
-                'Provider' => data_get($health, 'ai.provider', '-'),
+                'Parser provider' => data_get($health, 'ai.parser.provider', '-'),
                 'API key' => data_get($health, 'ai.api_key_configured') ? 'Tersedia' : 'Belum tersedia',
                 'Parser' => data_get($health, 'ai.parser.model', '-'),
+                'Renderer provider' => data_get($health, 'ai.renderer.provider', '-'),
                 'Renderer' => data_get($health, 'ai.renderer.model', '-'),
                 'Renderer aktif' => data_get($health, 'ai.renderer.enabled') ? 'Ya' : 'Tidak',
             ],
             'Data chatbot' => [
+                'Sumber konfigurasi' => data_get($health, 'configuration.source', 'environment'),
                 'Versi state' => data_get($health, 'conversation.state_version', '-'),
                 'Cache store' => data_get($health, 'conversation.cache_store', '-'),
                 'Masa ingatan' => data_get($health, 'conversation.memory_ttl_hours', 0).' jam',

@@ -24,6 +24,14 @@ return [
         'renderer_timeout' => (int) env('GROQ_RENDERER_TIMEOUT', 12),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'parser_model' => env('OPENAI_PARSER_MODEL', 'gpt-5.4-mini'),
+        'renderer_model' => env('OPENAI_RENDERER_MODEL', 'gpt-5.4-mini'),
+        'timeout' => (int) env('OPENAI_TIMEOUT', 25),
+        'renderer_timeout' => (int) env('OPENAI_RENDERER_TIMEOUT', 12),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

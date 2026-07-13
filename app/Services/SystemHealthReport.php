@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AiProvider;
 use App\Repositories\ProductRepository;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Arr;
@@ -10,7 +11,11 @@ use Throwable;
 
 class SystemHealthReport
 {
-    public function __construct(private ProductRepository $products) {}
+    public function __construct(
+        private ProductRepository $products,
+        private BotConfiguration $botConfiguration,
+        private AiProviderResolver $aiProviders,
+    ) {}
 
     public function generate(): array
     {
@@ -42,17 +47,21 @@ class SystemHealthReport
             'checks' => $checks,
             'telegram' => $this->telegramDetails(),
             'ai' => [
-                'provider' => config('chatbot.ai_provider'),
-                'api_key_configured' => filled(config('services.groq.api_key')),
+                'provider' => config('chatbot.parser_provider'),
+                'api_key_configured' => filled($this->parserProvider()?->api_key),
+                'fallback_enabled' => (bool) config('chatbot.parser_fallback_enabled'),
+                'fallback_order' => config('chatbot.parser_fallback_order'),
                 'parser' => [
-                    'model' => config('services.groq.parser_model'),
-                    'timeout_seconds' => (int) config('services.groq.timeout'),
+                    'provider' => $this->parserProvider()?->provider,
+                    'model' => $this->parserProvider()?->parser_model,
+                    'timeout_seconds' => (int) ($this->parserProvider()?->parser_timeout ?? 0),
                     'configured' => $this->parserConfigured(),
                 ],
                 'renderer' => [
                     'enabled' => (bool) config('chatbot.natural_renderer'),
-                    'model' => config('services.groq.renderer_model'),
-                    'timeout_seconds' => (int) config('services.groq.renderer_timeout'),
+                    'provider' => $this->aiProviders->renderer()?->provider,
+                    'model' => $this->aiProviders->renderer()?->renderer_model,
+                    'timeout_seconds' => (int) ($this->aiProviders->renderer()?->renderer_timeout ?? 0),
                     'max_words' => (int) config('chatbot.renderer_max_words'),
                     'configured' => $this->rendererStatus() === 'ok',
                 ],
@@ -62,6 +71,10 @@ class SystemHealthReport
                 'state_version' => 'v3',
                 'memory_ttl_hours' => (int) config('chatbot.memory_ttl_hours'),
                 'history_limit' => (int) config('chatbot.history_limit'),
+            ],
+            'configuration' => [
+                'source' => $this->botConfiguration->current()?->is_active ? 'database' : 'environment',
+                'panel_configured' => $this->botConfiguration->current() !== null,
             ],
             'catalog' => $catalog,
             'recent_failures' => $this->recentFailures(),
@@ -119,7 +132,7 @@ class SystemHealthReport
 
     private function parserConfigured(): bool
     {
-        return filled(config('services.groq.api_key')) && filled(config('services.groq.parser_model'));
+        return filled($this->parserProvider()?->api_key) && filled($this->parserProvider()?->parser_model);
     }
 
     private function rendererStatus(): string
@@ -128,7 +141,14 @@ class SystemHealthReport
             return 'disabled';
         }
 
-        return filled(config('services.groq.api_key')) && filled(config('services.groq.renderer_model')) ? 'ok' : 'degraded';
+        $renderer = $this->aiProviders->renderer();
+
+        return filled($renderer?->api_key) && filled($renderer?->renderer_model) ? 'ok' : 'degraded';
+    }
+
+    private function parserProvider(): ?AiProvider
+    {
+        return $this->aiProviders->find((string) config('chatbot.parser_provider', 'groq'));
     }
 
     private function recentFailures(): array
@@ -141,14 +161,14 @@ class SystemHealthReport
         $events = [];
         $lines = array_slice(file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [], -400);
         foreach ($lines as $line) {
-            if (! preg_match('/^\[([^]]+)]\s+\w+\.(WARNING|ERROR):\s+(Groq request failed|Natural renderer fallback)\s+(\{.*})$/', $line, $matches)) {
+            if (! preg_match('/^\[([^]]+)]\s+\w+\.(WARNING|ERROR|NOTICE):\s+(Groq request failed|Gemini request failed|Natural renderer fallback|Switching AI parser provider)\s+(\{.*})$/', $line, $matches)) {
                 continue;
             }
             $context = json_decode($matches[4], true) ?: [];
             $events[] = array_merge([
                 'timestamp' => $matches[1], 'level' => strtolower($matches[2]), 'event' => $matches[3],
             ], Arr::only($context, [
-                'attempt', 'status', 'api_code', 'action', 'model', 'latency_ms',
+                'attempt', 'status', 'api_code', 'action', 'provider', 'model', 'latency_ms',
                 'validator_passed', 'fallback_reason', 'product_code',
             ]));
         }

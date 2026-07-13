@@ -29,6 +29,7 @@ class FilamentSystemHealthPageTest extends TestCase
             'id' => 1,
             'name' => 'Admin Internal',
             'email' => 'admin@example.test',
+            'is_admin' => true,
         ]);
 
         $response = $this->actingAs($user)
