@@ -111,7 +111,7 @@ class ModelsRelationManager extends RelationManager
                         $price = $record->currentPrice();
 
                         return $price
-                            ? 'Input $'.number_format((float) $price->input_price_per_million_usd, 2, '.', ',').' · Output $'.number_format((float) $price->output_price_per_million_usd, 2, '.', ',')
+                            ? 'Input $'.number_format((float) $price->input_price_per_million_usd, 8, '.', ',').' · Output $'.number_format((float) $price->output_price_per_million_usd, 8, '.', ',')
                             : null;
                     })
                     ->placeholder('Harga belum diatur')

@@ -72,4 +72,30 @@ class BotConfigurationTest extends TestCase
         $this->assertSame('environment-telegram-token', config('services.telegram.token'));
         $this->assertSame('environment-groq-key', config('services.groq.api_key'));
     }
+
+    public function test_telegram_runtime_credentials_prioritize_database_values(): void
+    {
+        config([
+            'services.telegram.token' => null,
+            'services.telegram.webhook_secret' => null,
+            'services.telegram.webhook_url' => null,
+        ]);
+
+        $setting = new BotSetting;
+        $setting->forceFill([
+            'telegram_bot_token' => 'database-token',
+            'telegram_webhook_secret' => 'database-secret',
+            'telegram_webhook_url' => 'https://bot.example.test/api/telegram/webhook',
+            'telegram_timeout' => 18,
+            'is_active' => true,
+        ]);
+
+        $configuration = Mockery::mock(BotConfiguration::class)->makePartial();
+        $configuration->shouldReceive('current')->times(4)->andReturn($setting);
+
+        $this->assertSame('database-token', $configuration->telegramToken());
+        $this->assertSame('database-secret', $configuration->telegramWebhookSecret());
+        $this->assertSame('https://bot.example.test/api/telegram/webhook', $configuration->telegramWebhookUrl());
+        $this->assertSame(18, $configuration->telegramTimeout());
+    }
 }

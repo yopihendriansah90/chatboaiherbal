@@ -4,6 +4,7 @@ namespace App\Filament\Resources\AiUsageRecords;
 
 use App\Filament\Resources\AiUsageRecords\Pages\ListAiUsageRecords;
 use App\Models\AiUsageRecord;
+use App\Support\CurrencyFormatter;
 use BackedEnum;
 use Filament\Forms\Components\DatePicker;
 use Filament\Resources\Resource;
@@ -54,8 +55,16 @@ class AiUsageRecordResource extends Resource
                 TextColumn::make('output_tokens')->label('Output')->numeric()->placeholder('-')->sortable(),
                 TextColumn::make('reasoning_tokens')->label('Reasoning')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('total_tokens')->label('Total token')->numeric()->weight('bold')->placeholder('-')->sortable(),
-                TextColumn::make('total_cost_usd')->label('Estimasi USD')->money('USD', decimalPlaces: 2)->placeholder('Harga belum diatur')->sortable(),
-                TextColumn::make('total_cost_idr')->label('Estimasi IDR')->money('IDR', decimalPlaces: 2)->placeholder('Kurs belum diatur')->sortable(),
+                TextColumn::make('total_cost_usd')
+                    ->label('Estimasi USD')
+                    ->formatStateUsing(fn (mixed $state): ?string => CurrencyFormatter::usd($state))
+                    ->placeholder('Harga belum diatur')
+                    ->sortable(),
+                TextColumn::make('total_cost_idr')
+                    ->label('Estimasi IDR')
+                    ->formatStateUsing(fn (mixed $state): ?string => CurrencyFormatter::idr($state))
+                    ->placeholder('Kurs belum diatur')
+                    ->sortable(),
                 TextColumn::make('latency_ms')->label('Latency')->suffix(' ms')->numeric()->placeholder('-')->sortable()->toggleable(),
                 IconColumn::make('successful')->label('Berhasil')->boolean(),
                 TextColumn::make('status_code')->label('HTTP')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),

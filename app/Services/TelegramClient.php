@@ -7,17 +7,19 @@ use RuntimeException;
 
 class TelegramClient
 {
+    public function __construct(private BotConfiguration $configuration) {}
+
     public function call(string $method, array $payload = []): array
     {
-        $token = config('services.telegram.token');
+        $token = $this->configuration->telegramToken();
         if (! is_string($token) || $token === '') {
-            throw new RuntimeException('TELEGRAM_BOT_TOKEN belum dikonfigurasi.');
+            throw new RuntimeException('Token bot Telegram belum disimpan di Pengaturan Bot.');
         }
 
         return Http::acceptJson()
             ->asJson()
             ->connectTimeout(5)
-            ->timeout((int) config('services.telegram.timeout', 10))
+            ->timeout($this->configuration->telegramTimeout())
             ->post("https://api.telegram.org/bot{$token}/{$method}", $payload)
             ->throw()
             ->json();

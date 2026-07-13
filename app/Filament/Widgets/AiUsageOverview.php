@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\AiUsageRecord;
+use App\Support\CurrencyFormatter;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -28,8 +29,8 @@ class AiUsageOverview extends StatsOverviewWidget
             Stat::make('Token bulan ini', number_format((int) (clone $month)->sum('total_tokens'), 0, ',', '.'))
                 ->description($monthRequests.' attempt termasuk fallback')
                 ->descriptionIcon('heroicon-m-chart-bar-square'),
-            Stat::make('Estimasi biaya bulan ini', 'Rp '.number_format((float) (clone $month)->sum('total_cost_idr'), 2, ',', '.'))
-                ->description('$'.number_format((float) (clone $month)->sum('total_cost_usd'), 2, ',', '.'))
+            Stat::make('Estimasi biaya bulan ini', CurrencyFormatter::idr((clone $month)->sum('total_cost_idr')))
+                ->description(CurrencyFormatter::usd((clone $month)->sum('total_cost_usd')))
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('success'),
             Stat::make('Keberhasilan API', number_format($successRate, 1, ',', '.').'%')

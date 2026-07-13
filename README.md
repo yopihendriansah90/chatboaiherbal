@@ -126,8 +126,14 @@ Biaya dihitung saat response API diterima dan menyimpan snapshot harga serta kur
 Setelah deployment, jalankan:
 
 ```bash
-php artisan migrate --force
+php artisan migrate --seed --force
 ```
+
+Seeder standar dipisahkan menjadi `AdminUserSeeder`, `AiProviderSeeder`, `AiModelSeeder`, `AiModelPriceSeeder`, dan `BotSettingSeeder`. Seluruh seeder bersifat idempotent dan aman dijalankan kembali. API key serta secret Telegram tetap dibaca dari `.env`; nilai tersebut tidak ditulis ke source code. Harga awal merupakan snapshot USD bertanggal tetap dengan URL sumber resmi. Untuk perubahan harga berikutnya, tambahkan versi baru melalui panel agar histori tetap utuh.
+
+Seeder tidak membuat kurs USD/IDR karena kurs dikelola manual dan berubah dari waktu ke waktu. Setelah deployment pertama, tambahkan **Nilai Dolar** terbaru melalui panel admin.
+
+Di production, token bot, webhook secret, dan webhook URL Telegram dapat disimpan langsung melalui **Operasional → Pengaturan Bot → Telegram**. Runtime Telegram dan validasi webhook memprioritaskan tabel `bot_settings`; variabel Telegram pada `.env` hanya fallback opsional dan boleh dikosongkan. Secret disimpan memakai encrypted cast Laravel dan tidak pernah ditampilkan kembali oleh form.
 
 Nilai biaya merupakan estimasi berdasarkan harga manual, bukan pengganti invoice resmi provider.
 

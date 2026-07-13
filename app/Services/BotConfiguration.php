@@ -101,6 +101,30 @@ class BotConfiguration
         Cache::forget(self::CACHE_KEY);
     }
 
+    public function telegramToken(): ?string
+    {
+        return $this->telegramValue('telegram_bot_token', 'services.telegram.token');
+    }
+
+    public function telegramWebhookSecret(): ?string
+    {
+        return $this->telegramValue('telegram_webhook_secret', 'services.telegram.webhook_secret');
+    }
+
+    public function telegramWebhookUrl(): ?string
+    {
+        return $this->telegramValue('telegram_webhook_url', 'services.telegram.webhook_url');
+    }
+
+    public function telegramTimeout(): int
+    {
+        $settings = $this->current();
+
+        return (int) ($settings?->is_active
+            ? $settings->telegram_timeout
+            : config('services.telegram.timeout', 10));
+    }
+
     public function formData(): array
     {
         $setting = $this->current();
@@ -132,5 +156,14 @@ class BotConfiguration
             'renderer_ai_model_id' => $setting?->renderer_ai_model_id ?? $models->defaultRendererModelId(),
             'fallback_ai_model_ids' => $setting?->fallback_ai_model_ids ?? [],
         ];
+    }
+
+    private function telegramValue(string $attribute, string $fallbackConfig): ?string
+    {
+        $settings = $this->current();
+        $value = $settings?->is_active ? $settings->{$attribute} : null;
+        $value = filled($value) ? $value : config($fallbackConfig);
+
+        return is_string($value) && $value !== '' ? $value : null;
     }
 }

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\AiProviders\Tables;
 
 use App\Models\AiProvider;
 use App\Services\AiProviderTester;
+use App\Support\CurrencyFormatter;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
@@ -51,7 +52,7 @@ class AiProvidersTable
                     ->state(fn (AiProvider $record): float => (float) $record->usageRecords()
                         ->whereBetween('occurred_at', [now()->startOfMonth(), now()->endOfMonth()])
                         ->sum('total_cost_idr'))
-                    ->money('IDR', decimalPlaces: 2),
+                    ->formatStateUsing(fn (mixed $state): ?string => CurrencyFormatter::idr($state)),
                 TextColumn::make('last_tested_at')->label('Terakhir diuji')->since()->placeholder('-'),
             ])
             ->recordActions([

@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\AiProvider;
 use App\Models\ExchangeRate;
+use App\Support\CurrencyFormatter;
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
@@ -37,8 +38,8 @@ class AiProviderUsageOverview extends StatsOverviewWidget
                 ->description($requests.' attempt '.$this->record->name)
                 ->descriptionIcon('heroicon-m-bolt')
                 ->color('primary'),
-            Stat::make('Estimasi biaya', 'Rp '.number_format((float) (clone $month)->sum('total_cost_idr'), 2, ',', '.'))
-                ->description('$'.number_format((float) (clone $month)->sum('total_cost_usd'), 2, ',', '.').' bulan ini')
+            Stat::make('Estimasi biaya', CurrencyFormatter::idr((clone $month)->sum('total_cost_idr')))
+                ->description(CurrencyFormatter::usd((clone $month)->sum('total_cost_usd')).' bulan ini')
                 ->descriptionIcon('heroicon-m-banknotes')
                 ->color('success'),
             Stat::make('Keberhasilan HTTP', ($requests > 0 ? number_format(($successful / $requests) * 100, 1, ',', '.') : '0,0').'%')

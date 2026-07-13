@@ -1,5 +1,6 @@
 <?php
 
+use App\Services\BotConfiguration;
 use App\Services\DomainGate;
 use App\Services\ProductRuleEngine;
 use App\Services\TelegramClient;
@@ -13,16 +14,17 @@ Artisan::command('inspire', function () {
 
 Artisan::command('telegram:webhook {action=set : set, info, atau delete}', function () {
     $telegram = app(TelegramClient::class);
+    $configuration = app(BotConfiguration::class);
     $action = strtolower((string) $this->argument('action'));
 
-    if ($action === 'set' && (! config('services.telegram.webhook_url') || ! config('services.telegram.webhook_secret'))) {
-        throw new InvalidArgumentException('TELEGRAM_WEBHOOK_URL dan TELEGRAM_WEBHOOK_SECRET wajib diisi.');
+    if ($action === 'set' && (! $configuration->telegramWebhookUrl() || ! $configuration->telegramWebhookSecret())) {
+        throw new InvalidArgumentException('Webhook URL dan secret Telegram wajib disimpan di Pengaturan Bot.');
     }
 
     $result = match ($action) {
         'set' => $telegram->call('setWebhook', [
-            'url' => config('services.telegram.webhook_url'),
-            'secret_token' => config('services.telegram.webhook_secret'),
+            'url' => $configuration->telegramWebhookUrl(),
+            'secret_token' => $configuration->telegramWebhookSecret(),
             'allowed_updates' => ['message'],
         ]),
         'info' => $telegram->call('getWebhookInfo'),

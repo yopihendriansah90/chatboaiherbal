@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AiProviders\RelationManagers;
 
+use App\Support\CurrencyFormatter;
 use Filament\Forms\Components\DatePicker;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\IconColumn;
@@ -42,7 +43,11 @@ class UsageRecordsRelationManager extends RelationManager
                 TextColumn::make('output_tokens')->label('Output')->numeric()->placeholder('-')->sortable(),
                 TextColumn::make('reasoning_tokens')->label('Reasoning')->numeric()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('total_tokens')->label('Total')->numeric()->weight('bold')->placeholder('-')->sortable(),
-                TextColumn::make('total_cost_idr')->label('Estimasi biaya')->money('IDR', decimalPlaces: 2)->placeholder('Belum dihitung')->sortable(),
+                TextColumn::make('total_cost_idr')
+                    ->label('Estimasi biaya')
+                    ->formatStateUsing(fn (mixed $state): ?string => CurrencyFormatter::idr($state))
+                    ->placeholder('Belum dihitung')
+                    ->sortable(),
                 TextColumn::make('latency_ms')->label('Latency')->numeric()->suffix(' ms')->placeholder('-')->sortable(),
                 IconColumn::make('successful')->label('HTTP berhasil')->boolean(),
                 TextColumn::make('error_code')->label('Error')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\BotConfiguration;
 use App\Services\EmergencyDetector;
 use App\Services\HerbalChatbot;
 use App\Services\TelegramClient;
@@ -17,8 +18,9 @@ class TelegramWebhookController extends Controller
         HerbalChatbot $chatbot,
         TelegramClient $telegram,
         EmergencyDetector $emergencies,
+        BotConfiguration $configuration,
     ): JsonResponse {
-        $configuredSecret = (string) config('services.telegram.webhook_secret');
+        $configuredSecret = (string) $configuration->telegramWebhookSecret();
         $providedSecret = (string) $request->header('X-Telegram-Bot-Api-Secret-Token');
 
         if ($configuredSecret === '' || ! hash_equals($configuredSecret, $providedSecret)) {
