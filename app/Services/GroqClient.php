@@ -11,7 +11,10 @@ use Throwable;
 
 class GroqClient
 {
-    public function __construct(private HerbalPrompt $prompt) {}
+    public function __construct(
+        private HerbalPrompt $prompt,
+        private AiUsageRecorder $usage,
+    ) {}
 
     public function respond(string $message, array $state, ?AiProvider $provider = null): array
     {
@@ -23,7 +26,7 @@ class GroqClient
         $lastException = null;
         for ($attempt = 1; $attempt <= 2; $attempt++) {
             try {
-                return $this->request($key, $message, $state, $provider);
+                return $this->request($key, $message, $state, $provider, $attempt);
             } catch (Throwable $exception) {
                 $lastException = $exception;
                 $response = $exception instanceof RequestException ? $exception->response : null;
@@ -56,7 +59,7 @@ class GroqClient
         throw $lastException ?? new RuntimeException('Groq gagal memberikan jawaban.');
     }
 
-    private function request(string $key, string $message, array $state, ?AiProvider $provider): array
+    private function request(string $key, string $message, array $state, ?AiProvider $provider, int $attempt): array
     {
         $messages = array_merge(
             [['role' => 'system', 'content' => $this->prompt->instruction($state, $message)]],
@@ -83,13 +86,21 @@ class GroqClient
             $payload['include_reasoning'] = false;
         }
 
-        $response = Http::acceptJson()
-            ->asJson()
-            ->withToken($key)
-            ->connectTimeout(5)
-            ->timeout((int) ($provider?->parser_timeout ?: config('services.groq.timeout', 25)))
-            ->post('https://api.groq.com/openai/v1/chat/completions', $payload)
-            ->throw();
+        $startedAt = hrtime(true);
+        try {
+            $response = Http::acceptJson()
+                ->asJson()
+                ->withToken($key)
+                ->connectTimeout(5)
+                ->timeout((int) ($provider?->parser_timeout ?: config('services.groq.timeout', 25)))
+                ->post('https://api.groq.com/openai/v1/chat/completions', $payload);
+        } catch (Throwable $exception) {
+            $this->usage->recordTransportFailure('groq', 'parser', $model, $this->latency($startedAt), $attempt, $exception, $provider);
+            throw $exception;
+        }
+
+        $this->usage->recordResponse('groq', 'parser', $model, $response, $this->latency($startedAt), $attempt, $provider);
+        $response->throw();
 
         $text = $response->json('choices.0.message.content');
         if (! is_string($text) || $text === '') {
@@ -102,5 +113,10 @@ class GroqClient
         }
 
         return $result;
+    }
+
+    private function latency(int $startedAt): int
+    {
+        return (int) ((hrtime(true) - $startedAt) / 1_000_000);
     }
 }

@@ -4,6 +4,8 @@ namespace App\Filament\Resources\AiProviders;
 
 use App\Filament\Resources\AiProviders\Pages\EditAiProvider;
 use App\Filament\Resources\AiProviders\Pages\ListAiProviders;
+use App\Filament\Resources\AiProviders\RelationManagers\ModelPricesRelationManager;
+use App\Filament\Resources\AiProviders\RelationManagers\UsageRecordsRelationManager;
 use App\Filament\Resources\AiProviders\Schemas\AiProviderForm;
 use App\Filament\Resources\AiProviders\Tables\AiProvidersTable;
 use App\Models\AiProvider;
@@ -42,7 +44,8 @@ class AiProviderResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            ModelPricesRelationManager::class,
+            UsageRecordsRelationManager::class,
         ];
     }
 

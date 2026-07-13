@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class AiProvider extends Model
 {
@@ -38,5 +39,15 @@ class AiProvider extends Model
             'last_latency_ms' => 'integer',
             'last_tested_at' => 'datetime',
         ];
+    }
+
+    public function modelPrices(): HasMany
+    {
+        return $this->hasMany(AiModelPrice::class);
+    }
+
+    public function usageRecords(): HasMany
+    {
+        return $this->hasMany(AiUsageRecord::class);
     }
 }

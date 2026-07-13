@@ -12,7 +12,10 @@ use Throwable;
 
 class GeminiClient
 {
-    public function __construct(private HerbalPrompt $prompt) {}
+    public function __construct(
+        private HerbalPrompt $prompt,
+        private AiUsageRecorder $usage,
+    ) {}
 
     public function respond(string $message, array $state, ?AiProvider $provider = null): array
     {
@@ -25,7 +28,7 @@ class GeminiClient
 
         for ($attempt = 1; $attempt <= 2; $attempt++) {
             try {
-                return $this->request($key, $message, $state, $provider);
+                return $this->request($key, $message, $state, $provider, $attempt);
             } catch (Throwable $exception) {
                 $lastException = $exception;
                 $response = $exception instanceof RequestException ? $exception->response : null;
@@ -56,21 +59,31 @@ class GeminiClient
             ->timeout((int) config('services.gemini.timeout', 25));
     }
 
-    private function request(string $key, string $message, array $state, ?AiProvider $provider): array
+    private function request(string $key, string $message, array $state, ?AiProvider $provider, int $attempt): array
     {
-        $model = rawurlencode((string) ($provider?->parser_model ?: config('services.gemini.model')));
-        $response = $this->http()
-            ->timeout((int) ($provider?->parser_timeout ?: config('services.gemini.timeout', 25)))
-            ->withHeader('x-goog-api-key', $key)
-            ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
-                'system_instruction' => ['parts' => [['text' => $this->prompt->instruction($state, $message)]]],
-                'contents' => [['role' => 'user', 'parts' => [['text' => $message]]]],
-                'generationConfig' => [
-                    'responseMimeType' => 'application/json',
-                    'responseJsonSchema' => $this->prompt->jsonSchema(),
-                    'maxOutputTokens' => 600,
-                ],
-            ])->throw();
+        $modelName = (string) ($provider?->parser_model ?: config('services.gemini.model'));
+        $model = rawurlencode($modelName);
+        $startedAt = hrtime(true);
+        try {
+            $response = $this->http()
+                ->timeout((int) ($provider?->parser_timeout ?: config('services.gemini.timeout', 25)))
+                ->withHeader('x-goog-api-key', $key)
+                ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
+                    'system_instruction' => ['parts' => [['text' => $this->prompt->instruction($state, $message)]]],
+                    'contents' => [['role' => 'user', 'parts' => [['text' => $message]]]],
+                    'generationConfig' => [
+                        'responseMimeType' => 'application/json',
+                        'responseJsonSchema' => $this->prompt->jsonSchema(),
+                        'maxOutputTokens' => 600,
+                    ],
+                ]);
+        } catch (Throwable $exception) {
+            $this->usage->recordTransportFailure('gemini', 'parser', $modelName, $this->latency($startedAt), $attempt, $exception, $provider);
+            throw $exception;
+        }
+
+        $this->usage->recordResponse('gemini', 'parser', $modelName, $response, $this->latency($startedAt), $attempt, $provider);
+        $response->throw();
 
         $text = data_get($response->json(), 'candidates.0.content.parts.0.text');
         if (! is_string($text) || $text === '') {
@@ -83,5 +96,10 @@ class GeminiClient
         }
 
         return $result;
+    }
+
+    private function latency(int $startedAt): int
+    {
+        return (int) ((hrtime(true) - $startedAt) / 1_000_000);
     }
 }

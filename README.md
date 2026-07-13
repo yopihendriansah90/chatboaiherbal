@@ -111,6 +111,24 @@ OPENAI_PARSER_MODEL=gpt-5.4-mini
 OPENAI_RENDERER_MODEL=gpt-5.4-mini
 ```
 
+### Monitoring token dan estimasi biaya AI
+
+Menu **AI Usage → Laporan Usage** (`/admin/ai-usage`) mencatat setiap attempt API Groq, Gemini, dan OpenAI, termasuk fallback dan respons gagal. Laporan menyimpan provider, model, peran parser/renderer, input token, cached input, output/reasoning token, latency, status API, serta estimasi biaya USD dan rupiah. Isi prompt dan kondisi kesehatan pengguna tidak disimpan.
+
+Halaman **Operasional → AI Providers** menjadi pusat pengelolaan setiap provider. Buka action **Kelola** pada Groq, Gemini, atau OpenAI untuk mengakses tab **Konfigurasi**, **Harga Model**, dan **Usage Provider** dalam satu halaman. Ringkasan token/biaya bulanan, kesiapan harga dan kurs, tingkat keberhasilan HTTP, serta grafik 30 hari otomatis difilter untuk provider yang sedang dibuka. Laporan Usage global tetap tersedia untuk membandingkan seluruh provider.
+
+Harga tidak diambil atau diubah otomatis. Admin memasukkan harga resmi per satu juta token dari tab **Harga Model** pada masing-masing AI Provider, kemudian memasukkan nilai USD/IDR yang sudah diverifikasi melalui **AI Usage → Nilai Dolar**. Setiap pembaruan nilai dolar harus dibuat sebagai record baru. Nilai terbaru yang tanggal berlakunya tidak berada di masa depan otomatis digunakan untuk request AI berikutnya; histori lama bersifat read-only dan tidak dihitung ulang.
+
+Biaya dihitung saat response API diterima dan menyimpan snapshot harga serta kurs yang digunakan. Jika harga model belum tersedia, token tetap tercatat tetapi biaya ditampilkan sebagai belum dihitung. Jika kurs belum tersedia, biaya USD tetap dihitung sedangkan biaya rupiah menunggu kurs pada request berikutnya. Data historis tidak dihitung ulang ketika harga atau kurs baru ditambahkan.
+
+Setelah deployment, jalankan:
+
+```bash
+php artisan migrate --force
+```
+
+Nilai biaya merupakan estimasi berdasarkan harga manual, bukan pengganti invoice resmi provider.
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

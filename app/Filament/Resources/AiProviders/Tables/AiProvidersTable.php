@@ -39,6 +39,18 @@ class AiProvidersTable
                         default => 'gray',
                     }),
                 TextColumn::make('last_latency_ms')->label('Latency')->suffix(' ms')->placeholder('-'),
+                TextColumn::make('monthly_tokens')
+                    ->label('Token bulan ini')
+                    ->state(fn (AiProvider $record): int => (int) $record->usageRecords()
+                        ->whereBetween('occurred_at', [now()->startOfMonth(), now()->endOfMonth()])
+                        ->sum('total_tokens'))
+                    ->numeric(),
+                TextColumn::make('monthly_cost')
+                    ->label('Biaya bulan ini')
+                    ->state(fn (AiProvider $record): float => (float) $record->usageRecords()
+                        ->whereBetween('occurred_at', [now()->startOfMonth(), now()->endOfMonth()])
+                        ->sum('total_cost_idr'))
+                    ->money('IDR', decimalPlaces: 2),
                 TextColumn::make('last_tested_at')->label('Terakhir diuji')->since()->placeholder('-'),
             ])
             ->recordActions([
@@ -54,7 +66,7 @@ class AiProvidersTable
                             ->icon($success ? 'heroicon-o-check-circle' : 'heroicon-o-x-circle')
                             ->send();
                     }),
-                EditAction::make(),
+                EditAction::make()->label('Kelola'),
             ]);
     }
 }

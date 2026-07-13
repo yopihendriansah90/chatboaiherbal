@@ -5,10 +5,14 @@ namespace App\Services;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
+use Throwable;
 
 class OpenAiClient
 {
-    public function __construct(private HerbalPrompt $prompt) {}
+    public function __construct(
+        private HerbalPrompt $prompt,
+        private AiUsageRecorder $usage,
+    ) {}
 
     public function respond(string $message, array $state, ?AiProvider $provider = null): array
     {
@@ -17,25 +21,35 @@ class OpenAiClient
             throw new RuntimeException('OPENAI_API_KEY belum dikonfigurasi.');
         }
 
-        $response = Http::acceptJson()
-            ->asJson()
-            ->withToken($key)
-            ->connectTimeout(5)
-            ->timeout((int) ($provider?->parser_timeout ?: config('services.openai.timeout', 25)))
-            ->post('https://api.openai.com/v1/responses', [
-                'model' => $provider?->parser_model ?: config('services.openai.parser_model'),
-                'instructions' => $this->prompt->instruction($state, $message),
-                'input' => $this->prompt->messages($message, array_slice($state['history'] ?? [], -6)),
-                'max_output_tokens' => 600,
-                'text' => [
-                    'format' => [
-                        'type' => 'json_schema',
-                        'name' => 'parsed_herbal_message',
-                        'strict' => true,
-                        'schema' => $this->prompt->jsonSchema(),
+        $model = (string) ($provider?->parser_model ?: config('services.openai.parser_model'));
+        $startedAt = hrtime(true);
+        try {
+            $response = Http::acceptJson()
+                ->asJson()
+                ->withToken($key)
+                ->connectTimeout(5)
+                ->timeout((int) ($provider?->parser_timeout ?: config('services.openai.timeout', 25)))
+                ->post('https://api.openai.com/v1/responses', [
+                    'model' => $model,
+                    'instructions' => $this->prompt->instruction($state, $message),
+                    'input' => $this->prompt->messages($message, array_slice($state['history'] ?? [], -6)),
+                    'max_output_tokens' => 600,
+                    'text' => [
+                        'format' => [
+                            'type' => 'json_schema',
+                            'name' => 'parsed_herbal_message',
+                            'strict' => true,
+                            'schema' => $this->prompt->jsonSchema(),
+                        ],
                     ],
-                ],
-            ])->throw();
+                ]);
+        } catch (Throwable $exception) {
+            $this->usage->recordTransportFailure('openai', 'parser', $model, $this->latency($startedAt), 1, $exception, $provider);
+            throw $exception;
+        }
+
+        $this->usage->recordResponse('openai', 'parser', $model, $response, $this->latency($startedAt), 1, $provider);
+        $response->throw();
 
         $text = $response->json('output_text') ?? $response->json('output.0.content.0.text');
         if (! is_string($text) || $text === '') {
@@ -48,5 +62,10 @@ class OpenAiClient
         }
 
         return $result;
+    }
+
+    private function latency(int $startedAt): int
+    {
+        return (int) ((hrtime(true) - $startedAt) / 1_000_000);
     }
 }
