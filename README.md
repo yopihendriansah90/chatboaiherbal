@@ -135,6 +135,8 @@ Seeder tidak membuat kurs USD/IDR karena kurs dikelola manual dan berubah dari w
 
 Di production, token bot, webhook secret, dan webhook URL Telegram dapat disimpan langsung melalui **Operasional → Pengaturan Bot → Telegram**. Runtime Telegram dan validasi webhook memprioritaskan tabel `bot_settings`; variabel Telegram pada `.env` hanya fallback opsional dan boleh dikosongkan. Secret disimpan memakai encrypted cast Laravel dan tidak pernah ditampilkan kembali oleh form.
 
+Untuk deployment di belakang Cloudflare, Traefik, atau reverse proxy lain, gunakan `APP_URL=https://domain-production.example` dan `ASSET_URL=https://domain-production.example`. Aplikasi mempercayai header proxy dan memakai asset root eksplisit agar dynamic import Filament/Livewire selalu menggunakan HTTPS dan tidak terkena mixed content.
+
 Nilai biaya merupakan estimasi berdasarkan harga manual, bukan pengganti invoice resmi provider.
 
 ## About Laravel

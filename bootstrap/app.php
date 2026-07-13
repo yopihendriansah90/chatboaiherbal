@@ -16,6 +16,11 @@ return Application::configure(basePath: dirname(__DIR__))
         },
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // The application is only exposed through Cloudflare / Traefik / Nginx.
+        // Trust the direct proxy so Laravel honors X-Forwarded-Proto=https when
+        // generating Filament and Livewire asset URLs.
+        $middleware->trustProxies(at: '*');
+
         $middleware->preventRequestsDuringMaintenance(except: ['/up']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
