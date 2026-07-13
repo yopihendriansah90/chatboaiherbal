@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use App\Models\AiModel;
 use App\Models\AiProvider;
 use App\Services\AiClient;
 use App\Services\AiProviderResolver;
@@ -82,5 +83,45 @@ class AiClientTest extends TestCase
         $result = (new AiClient($gemini, $groq, $openai, $providers))->respond('Keluhan', []);
 
         $this->assertSame($expected, $result);
+    }
+
+    public function test_uses_selected_model_instead_of_legacy_provider_model(): void
+    {
+        config(['chatbot.parser_ai_model_id' => 42]);
+        $providerProfile = new AiProvider([
+            'provider' => 'groq', 'name' => 'Groq', 'api_key' => 'groq-key',
+            'parser_model' => 'legacy-model', 'renderer_model' => 'renderer',
+            'parser_timeout' => 10, 'renderer_timeout' => 10, 'is_enabled' => true,
+        ]);
+        $model = new AiModel([
+            'model_id' => 'openai/gpt-oss-120b',
+            'display_name' => 'GPT OSS 120B',
+            'can_parse' => true,
+            'supports_structured_output' => true,
+            'status' => 'active',
+        ]);
+        $model->id = 42;
+        $model->setRelation('provider', $providerProfile);
+
+        $selectedProfile = clone $providerProfile;
+        $selectedProfile->parser_model = $model->model_id;
+        $providers = Mockery::mock(AiProviderResolver::class);
+        $providers->expects('parserModelCandidates')->once()->andReturn([$model]);
+        $providers->expects('circuitOpen')->with('groq:model:42')->once()->andReturnFalse();
+        $providers->expects('providerForModel')->with($model, 'parser')->once()->andReturn($selectedProfile);
+        $providers->expects('recordSuccess')->with('groq:model:42')->once();
+
+        $gemini = Mockery::mock(GeminiClient::class);
+        $groq = Mockery::mock(GroqClient::class);
+        $expected = ['intent' => 'health'];
+        $groq->expects('respond')
+            ->with('Keluhan', [], Mockery::on(fn (AiProvider $provider): bool => $provider->parser_model === 'openai/gpt-oss-120b'))
+            ->once()
+            ->andReturn($expected);
+
+        $result = (new AiClient($gemini, $groq, providers: $providers))->respond('Keluhan', []);
+
+        $this->assertSame($expected, $result);
+        $this->assertSame('openai/gpt-oss-120b', config('chatbot.active_parser_model'));
     }
 }

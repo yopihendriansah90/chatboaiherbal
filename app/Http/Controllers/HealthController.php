@@ -20,7 +20,7 @@ class HealthController extends Controller
                 'configured' => $this->telegramConfigured(),
             ],
             'ai_parser' => [
-                'provider' => config('chatbot.parser_provider'),
+                'provider' => $providers->parser()?->provider,
                 'configured' => $this->parserConfigured($providers),
             ],
             'natural_renderer' => [
@@ -73,7 +73,7 @@ class HealthController extends Controller
 
     private function parserConfigured(AiProviderResolver $providers): bool
     {
-        $provider = $providers->find((string) config('chatbot.parser_provider', 'groq'));
+        $provider = $providers->parser();
 
         return filled($provider?->api_key) && filled($provider?->parser_model);
     }

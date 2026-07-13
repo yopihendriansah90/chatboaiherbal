@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AiModel;
 use App\Models\AiModelPrice;
 use App\Models\AiProvider;
 use App\Models\ExchangeRate;
@@ -18,12 +19,18 @@ class AiCostCalculator
             return [];
         }
 
+        $aiModel = AiModel::query()
+            ->where('ai_provider_id', $providerId)
+            ->where('model_id', $model)
+            ->first();
+
         $price = AiModelPrice::query()
             ->where('ai_provider_id', $providerId)
-            ->where('model', $model)
+            ->when($aiModel, fn ($query) => $query->where('ai_model_id', $aiModel->id), fn ($query) => $query->where('model', $model))
             ->where('is_active', true)
             ->where('effective_at', '<=', now())
             ->latest('effective_at')
+            ->latest('id')
             ->first();
 
         $exchangeRate = ExchangeRate::current();
@@ -31,6 +38,7 @@ class AiCostCalculator
         if (! $price) {
             return [
                 'ai_provider_id' => $providerId,
+                'ai_model_id' => $aiModel?->id,
                 'exchange_rate_id' => $exchangeRate?->id,
                 'usd_idr_rate' => $exchangeRate?->rate,
             ];
@@ -51,6 +59,7 @@ class AiCostCalculator
 
         return [
             'ai_provider_id' => $providerId,
+            'ai_model_id' => $aiModel?->id,
             'ai_model_price_id' => $price->id,
             'input_price_per_million_usd' => $inputPrice,
             'cached_input_price_per_million_usd' => $cachedPrice,

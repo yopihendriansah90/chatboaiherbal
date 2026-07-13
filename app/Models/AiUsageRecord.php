@@ -41,6 +41,11 @@ class AiUsageRecord extends Model
         return $this->belongsTo(AiModelPrice::class, 'ai_model_price_id');
     }
 
+    public function aiModel(): BelongsTo
+    {
+        return $this->belongsTo(AiModel::class);
+    }
+
     public function exchangeRate(): BelongsTo
     {
         return $this->belongsTo(ExchangeRate::class);

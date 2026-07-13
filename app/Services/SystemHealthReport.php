@@ -47,10 +47,14 @@ class SystemHealthReport
             'checks' => $checks,
             'telegram' => $this->telegramDetails(),
             'ai' => [
-                'provider' => config('chatbot.parser_provider'),
+                'provider' => $this->parserProvider()?->provider,
                 'api_key_configured' => filled($this->parserProvider()?->api_key),
                 'fallback_enabled' => (bool) config('chatbot.parser_fallback_enabled'),
-                'fallback_order' => config('chatbot.parser_fallback_order'),
+                'fallback_models' => collect(config('chatbot.fallback_ai_model_ids', []))
+                    ->map(fn ($id) => $this->aiProviders->model((int) $id)?->optionLabel())
+                    ->filter()
+                    ->values()
+                    ->all(),
                 'parser' => [
                     'provider' => $this->parserProvider()?->provider,
                     'model' => $this->parserProvider()?->parser_model,
@@ -148,7 +152,7 @@ class SystemHealthReport
 
     private function parserProvider(): ?AiProvider
     {
-        return $this->aiProviders->find((string) config('chatbot.parser_provider', 'groq'));
+        return $this->aiProviders->parser();
     }
 
     private function recentFailures(): array

@@ -95,9 +95,11 @@ php artisan migrate
 
 ### Multi-provider AI
 
-Menu **Operasional → AI Providers** (`/admin/ai-providers`) mengelola Groq, OpenAI, dan Gemini. Setiap API key disimpan terenkripsi dan tidak pernah dimuat kembali ke form. Model parser, model renderer, timeout, status aktif, prioritas, hasil uji koneksi, serta latency dapat diatur per provider.
+Menu **Operasional → AI Providers** (`/admin/ai-providers`) mengelola koneksi Groq, OpenAI, dan Gemini. Setiap API key disimpan terenkripsi dan tidak pernah dimuat kembali ke form. Konfigurasi provider hanya berisi koneksi, status, prioritas, dan timeout agar pengaturannya tetap sederhana.
 
-Provider parser utama, provider renderer utama, dan urutan fallback dipilih pada `/admin/bot-settings`. Parser mencoba provider berikutnya ketika provider utama timeout, terkena rate limit, menghasilkan JSON invalid, atau tidak tersedia. Setelah tiga kegagalan, circuit breaker melewati provider tersebut selama lima menit. Renderer tidak memakai fallback lintas provider; kegagalan renderer langsung memakai template Laravel.
+Setiap provider memiliki tab **Model**. Di sana admin menambahkan model ID API, nama tampilan, kemampuan parser/renderer/structured output, status, context window, dan versi harga token. Harga dalam rupiah pada tabel model selalu dihitung menggunakan record **Nilai Dolar** terbaru.
+
+Model parser utama, model renderer, dan urutan model fallback dipilih pada tab **Strategi AI** di `/admin/bot-settings`. Satu daftar model dapat berisi model dari provider berbeda, sehingga routing cukup diatur sekali. Parser mencoba model fallback berikutnya ketika model utama timeout, terkena rate limit, menghasilkan JSON invalid, atau tidak tersedia. Setelah tiga kegagalan, circuit breaker melewati kombinasi provider-model tersebut selama lima menit. Renderer tidak memakai fallback generatif; kegagalannya langsung memakai template Laravel.
 
 Fallback `.env` untuk deployment baru:
 
@@ -115,9 +117,9 @@ OPENAI_RENDERER_MODEL=gpt-5.4-mini
 
 Menu **AI Usage → Laporan Usage** (`/admin/ai-usage`) mencatat setiap attempt API Groq, Gemini, dan OpenAI, termasuk fallback dan respons gagal. Laporan menyimpan provider, model, peran parser/renderer, input token, cached input, output/reasoning token, latency, status API, serta estimasi biaya USD dan rupiah. Isi prompt dan kondisi kesehatan pengguna tidak disimpan.
 
-Halaman **Operasional → AI Providers** menjadi pusat pengelolaan setiap provider. Buka action **Kelola** pada Groq, Gemini, atau OpenAI untuk mengakses tab **Konfigurasi**, **Harga Model**, dan **Usage Provider** dalam satu halaman. Ringkasan token/biaya bulanan, kesiapan harga dan kurs, tingkat keberhasilan HTTP, serta grafik 30 hari otomatis difilter untuk provider yang sedang dibuka. Laporan Usage global tetap tersedia untuk membandingkan seluruh provider.
+Halaman **Operasional → AI Providers** menjadi pusat pengelolaan setiap provider. Buka action **Kelola** pada Groq, Gemini, atau OpenAI untuk mengakses tab **Konfigurasi**, **Model**, dan **Usage Provider** dalam satu halaman. Ringkasan token/biaya bulanan, kesiapan harga dan kurs, tingkat keberhasilan HTTP, serta grafik 30 hari otomatis difilter untuk provider yang sedang dibuka. Laporan Usage global tetap tersedia untuk membandingkan seluruh provider.
 
-Harga tidak diambil atau diubah otomatis. Admin memasukkan harga resmi per satu juta token dari tab **Harga Model** pada masing-masing AI Provider, kemudian memasukkan nilai USD/IDR yang sudah diverifikasi melalui **AI Usage → Nilai Dolar**. Setiap pembaruan nilai dolar harus dibuat sebagai record baru. Nilai terbaru yang tanggal berlakunya tidak berada di masa depan otomatis digunakan untuk request AI berikutnya; histori lama bersifat read-only dan tidak dihitung ulang.
+Harga tidak diambil atau diubah otomatis. Admin menekan **Perbarui harga** pada model terkait dan memasukkan harga resmi per satu juta token beserta URL sumber, kemudian memasukkan nilai USD/IDR yang sudah diverifikasi melalui **AI Usage → Nilai Dolar**. Setiap perubahan harga dan nilai dolar dibuat sebagai record baru agar histori audit tetap utuh. Nilai terbaru yang tanggal berlakunya tidak berada di masa depan otomatis menjadi acuan untuk request AI berikutnya dan estimasi IDR pada UI.
 
 Biaya dihitung saat response API diterima dan menyimpan snapshot harga serta kurs yang digunakan. Jika harga model belum tersedia, token tetap tercatat tetapi biaya ditampilkan sebagai belum dihitung. Jika kurs belum tersedia, biaya USD tetap dihitung sedangkan biaya rupiah menunggu kurs pada request berikutnya. Data historis tidak dihitung ulang ketika harga atau kurs baru ditambahkan.
 

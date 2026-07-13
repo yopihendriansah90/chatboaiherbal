@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\AiModel;
 use App\Models\AiProvider;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
@@ -67,7 +68,104 @@ class AiProviderResolver
 
     public function renderer(): ?AiProvider
     {
+        $modelId = (int) config('chatbot.renderer_ai_model_id', 0);
+        if ($modelId > 0) {
+            $model = $this->model($modelId);
+
+            return $model?->can_render ? $this->providerForModel($model, 'renderer') : null;
+        }
+
         return $this->find((string) config('chatbot.renderer_provider', 'groq'));
+    }
+
+    public function parser(): ?AiProvider
+    {
+        $modelId = (int) config('chatbot.parser_ai_model_id', 0);
+        if ($modelId > 0) {
+            $model = $this->model($modelId);
+
+            return $model?->can_parse && $model->supports_structured_output
+                ? $this->providerForModel($model, 'parser')
+                : null;
+        }
+
+        return $this->find((string) config('chatbot.parser_provider', 'groq'));
+    }
+
+    public function model(int $id): ?AiModel
+    {
+        try {
+            if (! Schema::hasTable('ai_models')) {
+                return null;
+            }
+
+            $model = AiModel::query()->with('provider')->find($id);
+
+            return $model?->isAvailable() ? $model : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /** @return list<AiModel> */
+    public function parserModelCandidates(): array
+    {
+        $ids = [(int) config('chatbot.parser_ai_model_id', 0)];
+        if (config('chatbot.parser_fallback_enabled', true)) {
+            $fallbacks = config('chatbot.fallback_ai_model_ids', []);
+            $ids = array_merge($ids, is_array($fallbacks) ? $fallbacks : []);
+        }
+
+        return collect($ids)
+            ->map(fn ($id) => $this->model((int) $id))
+            ->filter(fn (?AiModel $model) => $model?->can_parse && $model->supports_structured_output)
+            ->unique('id')
+            ->values()
+            ->all();
+    }
+
+    public function providerForModel(AiModel $model, string $role): ?AiProvider
+    {
+        $providerName = $model->provider?->provider;
+        if (! $providerName || ! ($provider = $this->find($providerName))) {
+            return null;
+        }
+
+        if ($role === 'renderer') {
+            $provider->renderer_model = $model->model_id;
+        } else {
+            $provider->parser_model = $model->model_id;
+        }
+
+        return $provider;
+    }
+
+    public function parserModelOptions(): array
+    {
+        return $this->modelOptions('parser');
+    }
+
+    public function rendererModelOptions(): array
+    {
+        return $this->modelOptions('renderer');
+    }
+
+    public function defaultParserModelId(): ?int
+    {
+        return $this->defaultModelId(
+            (string) config('chatbot.parser_provider', 'groq'),
+            (string) config('services.groq.parser_model', 'openai/gpt-oss-20b'),
+            'parser',
+        );
+    }
+
+    public function defaultRendererModelId(): ?int
+    {
+        return $this->defaultModelId(
+            (string) config('chatbot.renderer_provider', 'groq'),
+            (string) config('services.groq.renderer_model', 'qwen/qwen3.6-27b'),
+            'renderer',
+        );
     }
 
     public function availableOptions(): array
@@ -102,6 +200,46 @@ class AiProviderResolver
     {
         Cache::forget("ai-provider:failures:{$role}:{$provider}");
         Cache::forget("ai-provider:circuit:{$role}:{$provider}");
+    }
+
+    private function modelOptions(string $role): array
+    {
+        try {
+            if (! Schema::hasTable('ai_models')) {
+                return [];
+            }
+
+            return AiModel::query()
+                ->with('provider')
+                ->where('status', '!=', 'archived')
+                ->where($role === 'parser' ? 'can_parse' : 'can_render', true)
+                ->when($role === 'parser', fn ($query) => $query->where('supports_structured_output', true))
+                ->whereHas('provider', fn ($query) => $query->where('is_enabled', true))
+                ->orderByRaw("CASE WHEN status = 'recommended' THEN 0 ELSE 1 END")
+                ->orderBy('sort_order')
+                ->get()
+                ->mapWithKeys(fn (AiModel $model) => [$model->id => $model->optionLabel()])
+                ->all();
+        } catch (Throwable) {
+            return [];
+        }
+    }
+
+    private function defaultModelId(string $provider, string $modelId, string $role): ?int
+    {
+        try {
+            if (! Schema::hasTable('ai_models')) {
+                return null;
+            }
+
+            return AiModel::query()
+                ->where('model_id', $modelId)
+                ->where($role === 'parser' ? 'can_parse' : 'can_render', true)
+                ->whereHas('provider', fn ($query) => $query->where('provider', $provider))
+                ->value('id');
+        } catch (Throwable) {
+            return null;
+        }
     }
 
     private function legacyKey(string $provider): mixed

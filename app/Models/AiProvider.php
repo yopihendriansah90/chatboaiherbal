@@ -46,6 +46,11 @@ class AiProvider extends Model
         return $this->hasMany(AiModelPrice::class);
     }
 
+    public function models(): HasMany
+    {
+        return $this->hasMany(AiModel::class);
+    }
+
     public function usageRecords(): HasMany
     {
         return $this->hasMany(AiUsageRecord::class);

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class BotSetting extends Model
 {
@@ -16,6 +17,9 @@ class BotSetting extends Model
         'renderer_provider',
         'parser_fallback_enabled',
         'parser_fallback_order',
+        'parser_ai_model_id',
+        'renderer_ai_model_id',
+        'fallback_ai_model_ids',
         'parser_model',
         'renderer_model',
         'natural_renderer_enabled',
@@ -43,6 +47,7 @@ class BotSetting extends Model
             'natural_renderer_enabled' => 'boolean',
             'parser_fallback_enabled' => 'boolean',
             'parser_fallback_order' => 'array',
+            'fallback_ai_model_ids' => 'array',
             'is_active' => 'boolean',
             'telegram_timeout' => 'integer',
             'parser_timeout' => 'integer',
@@ -51,5 +56,15 @@ class BotSetting extends Model
             'memory_ttl_hours' => 'integer',
             'history_limit' => 'integer',
         ];
+    }
+
+    public function parserModelSelection(): BelongsTo
+    {
+        return $this->belongsTo(AiModel::class, 'parser_ai_model_id');
+    }
+
+    public function rendererModelSelection(): BelongsTo
+    {
+        return $this->belongsTo(AiModel::class, 'renderer_ai_model_id');
     }
 }

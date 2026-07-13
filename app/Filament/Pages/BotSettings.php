@@ -48,7 +48,7 @@ class BotSettings extends Page
 
     public function getSubheading(): string
     {
-        return 'Kelola Telegram, model AI, dan perilaku percakapan tanpa mengubah file .env.';
+        return 'Kelola Telegram, strategi model AI, dan perilaku percakapan tanpa mengubah file .env.';
     }
 
     public function form(Schema $schema): Schema
@@ -95,40 +95,48 @@ class BotSettings extends Page
                                             ->maxValue(60),
                                     ]),
                             ]),
-                        Tab::make('AI Provider')
+                        Tab::make('Strategi AI')
                             ->icon('heroicon-o-cpu-chip')
                             ->schema([
-                                Section::make('Routing provider')
-                                    ->description('Credential dan model setiap provider dikelola melalui menu AI Providers.')
+                                Section::make('Model utama')
+                                    ->description('Pilih model aktif yang sudah ditambahkan pada AI Provider. Parser wajib mendukung structured output.')
                                     ->columns(2)
                                     ->schema([
-                                        Select::make('parser_provider')
-                                            ->label('Provider parser utama')
-                                            ->options(fn (): array => app(AiProviderResolver::class)->availableOptions())
+                                        Select::make('parser_ai_model_id')
+                                            ->label('Model parser utama')
+                                            ->options(fn (): array => app(AiProviderResolver::class)->parserModelOptions())
                                             ->required()
-                                            ->searchable(),
-                                        Select::make('renderer_provider')
-                                            ->label('Provider renderer utama')
-                                            ->options(fn (): array => app(AiProviderResolver::class)->availableOptions())
-                                            ->required()
-                                            ->searchable(),
+                                            ->searchable()
+                                            ->preload()
+                                            ->helperText('Mengubah pesan menjadi fakta JSON terstruktur.'),
+                                        Select::make('renderer_ai_model_id')
+                                            ->label('Model natural renderer')
+                                            ->options(fn (): array => app(AiProviderResolver::class)->rendererModelOptions())
+                                            ->searchable()
+                                            ->preload()
+                                            ->helperText('Memperhalus pembuka respons tanpa memilih produk.'),
                                         Toggle::make('parser_fallback_enabled')
-                                            ->label('Aktifkan fallback parser')
-                                            ->helperText('Provider berikutnya digunakan saat timeout, rate limit, atau respons invalid.')
+                                            ->label('Aktifkan fallback model')
+                                            ->helperText('Model berikutnya digunakan saat model utama timeout, rate limit, atau respons invalid.')
                                             ->live()
                                             ->columnSpanFull(),
-                                        Select::make('parser_fallback_order')
-                                            ->label('Provider fallback')
-                                            ->options(fn (): array => app(AiProviderResolver::class)->availableOptions())
+                                        Select::make('fallback_ai_model_ids')
+                                            ->label('Urutan model fallback')
+                                            ->options(fn (): array => app(AiProviderResolver::class)->parserModelOptions())
                                             ->multiple()
                                             ->reorderable()
+                                            ->searchable()
+                                            ->preload()
                                             ->visible(fn ($get): bool => (bool) $get('parser_fallback_enabled'))
                                             ->columnSpanFull(),
                                         Toggle::make('natural_renderer_enabled')
                                             ->label('Aktifkan natural renderer')
-                                            ->helperText('Renderer tidak melakukan fallback lintas provider; jika gagal bot memakai template Laravel.')
+                                            ->helperText('Jika dimatikan atau gagal, bot langsung memakai template Laravel.')
                                             ->columnSpanFull(),
                                     ]),
+                                Section::make('Cara pengaturan')
+                                    ->description('API key dan daftar model dikelola melalui menu Operasional → AI Providers. Harga token dikelola pada model masing-masing.')
+                                    ->compact(),
                             ]),
                         Tab::make('Percakapan')
                             ->icon('heroicon-o-chat-bubble-left-right')
@@ -179,6 +187,31 @@ class BotSettings extends Page
     {
         $values = $this->form->getState();
         unset($values['telegram_token_configured'], $values['webhook_secret_configured'], $values['groq_key_configured']);
+
+        $resolver = app(AiProviderResolver::class);
+        $parserModel = $resolver->model((int) ($values['parser_ai_model_id'] ?? 0));
+        $rendererModel = $resolver->model((int) ($values['renderer_ai_model_id'] ?? 0));
+        if ($parserModel) {
+            $values['parser_provider'] = $parserModel->provider->provider;
+            $values['parser_model'] = $parserModel->model_id;
+        }
+        if ($rendererModel) {
+            $values['renderer_provider'] = $rendererModel->provider->provider;
+            $values['renderer_model'] = $rendererModel->model_id;
+        }
+        $values['parser_fallback_order'] = collect($values['fallback_ai_model_ids'] ?? [])
+            ->reject(fn ($id) => (int) $id === (int) ($values['parser_ai_model_id'] ?? 0))
+            ->map(fn ($id) => $resolver->model((int) $id)?->provider?->provider)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $values['fallback_ai_model_ids'] = collect($values['fallback_ai_model_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->reject(fn ($id) => $id === (int) ($values['parser_ai_model_id'] ?? 0))
+            ->unique()
+            ->values()
+            ->all();
 
         $configuration->save($values, auth()->id());
         $this->form->fill($configuration->formData());

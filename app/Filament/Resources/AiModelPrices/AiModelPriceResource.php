@@ -2,12 +2,9 @@
 
 namespace App\Filament\Resources\AiModelPrices;
 
-use App\Filament\Resources\AiModelPrices\Pages\CreateAiModelPrice;
-use App\Filament\Resources\AiModelPrices\Pages\EditAiModelPrice;
 use App\Filament\Resources\AiModelPrices\Pages\ListAiModelPrices;
 use App\Models\AiModelPrice;
 use BackedEnum;
-use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -85,17 +82,13 @@ class AiModelPriceResource extends Resource
                 IconColumn::make('is_active')->label('Aktif')->boolean(),
                 TextColumn::make('updatedBy.name')->label('Diperbarui oleh')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->recordActions([
-                EditAction::make(),
-            ]);
+            ->recordActions([]);
     }
 
     public static function getPages(): array
     {
         return [
             'index' => ListAiModelPrices::route('/'),
-            'create' => CreateAiModelPrice::route('/create'),
-            'edit' => EditAiModelPrice::route('/{record}/edit'),
         ];
     }
 }

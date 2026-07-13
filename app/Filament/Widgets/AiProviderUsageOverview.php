@@ -25,17 +25,12 @@ class AiProviderUsageOverview extends StatsOverviewWidget
             ->whereBetween('occurred_at', [now()->startOfMonth(), now()->endOfMonth()]);
         $requests = (clone $month)->count();
         $successful = (clone $month)->where('successful', true)->count();
-        $activeModels = array_values(array_unique(array_filter([
-            $this->record->parser_model,
-            $this->record->renderer_model,
-        ])));
-        $pricedModels = $this->record->modelPrices()
-            ->whereIn('model', $activeModels)
-            ->where('is_active', true)
-            ->where('effective_at', '<=', now())
-            ->distinct()
-            ->count('model');
+        $activeModels = $this->record->models()->where('status', '!=', 'archived')->get();
+        $pricedModels = $activeModels->filter(fn ($model) => $model->currentPrice() !== null)->count();
         $rate = ExchangeRate::current();
+        $costReady = $activeModels->isNotEmpty()
+            && $pricedModels === $activeModels->count()
+            && $rate !== null;
 
         return [
             Stat::make('Token bulan ini', number_format((int) (clone $month)->sum('total_tokens'), 0, ',', '.'))
@@ -50,10 +45,10 @@ class AiProviderUsageOverview extends StatsOverviewWidget
                 ->description(($requests - $successful).' request gagal')
                 ->descriptionIcon('heroicon-m-signal')
                 ->color($requests === 0 || $successful / $requests >= 0.95 ? 'success' : 'warning'),
-            Stat::make('Kesiapan biaya', $pricedModels.'/'.count($activeModels).' model memiliki harga')
+            Stat::make('Kesiapan biaya', $pricedModels.'/'.$activeModels->count().' model memiliki harga')
                 ->description($rate ? 'Kurs aktif Rp '.number_format((float) $rate->rate, 2, ',', '.') : 'Kurs USD/IDR belum diatur')
-                ->descriptionIcon($pricedModels === count($activeModels) && $rate ? 'heroicon-m-check-circle' : 'heroicon-m-exclamation-triangle')
-                ->color($pricedModels === count($activeModels) && $rate ? 'success' : 'warning'),
+                ->descriptionIcon($costReady ? 'heroicon-m-check-circle' : 'heroicon-m-exclamation-triangle')
+                ->color($costReady ? 'success' : 'warning'),
         ];
     }
 }

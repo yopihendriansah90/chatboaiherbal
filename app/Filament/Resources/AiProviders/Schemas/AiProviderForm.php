@@ -38,11 +38,10 @@ class AiProviderForm
                         Toggle::make('is_enabled')->label('Provider aktif')->default(true),
                         TextInput::make('priority')->numeric()->minValue(1)->maxValue(10)->required(),
                     ]),
-                Section::make('Model dan timeout')
+                Section::make('Timeout lanjutan')
+                    ->description('Daftar model dan harga dikelola melalui tab Model setelah koneksi provider disimpan.')
                     ->columns(2)
                     ->schema([
-                        TextInput::make('parser_model')->label('Model parser')->required()->maxLength(255),
-                        TextInput::make('renderer_model')->label('Model renderer')->required()->maxLength(255),
                         TextInput::make('parser_timeout')->numeric()->suffix('detik')->minValue(5)->maxValue(120)->required(),
                         TextInput::make('renderer_timeout')->numeric()->suffix('detik')->minValue(3)->maxValue(60)->required(),
                     ]),

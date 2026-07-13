@@ -10,6 +10,7 @@ class AiModelPrice extends Model
 {
     protected $fillable = [
         'ai_provider_id',
+        'ai_model_id',
         'model',
         'input_price_per_million_usd',
         'cached_input_price_per_million_usd',
@@ -34,6 +35,11 @@ class AiModelPrice extends Model
     public function provider(): BelongsTo
     {
         return $this->belongsTo(AiProvider::class, 'ai_provider_id');
+    }
+
+    public function aiModel(): BelongsTo
+    {
+        return $this->belongsTo(AiModel::class);
     }
 
     public function updatedBy(): BelongsTo

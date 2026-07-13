@@ -19,8 +19,9 @@ class AiProvidersTable
             ->defaultSort('priority')
             ->columns([
                 TextColumn::make('name')->label('Provider')->weight('bold')->searchable(),
-                TextColumn::make('parser_model')->label('Model parser')->searchable()->wrap(),
-                TextColumn::make('renderer_model')->label('Model renderer')->searchable()->wrap(),
+                TextColumn::make('models_count')->label('Model aktif')
+                    ->state(fn (AiProvider $record): int => $record->models()->where('status', '!=', 'archived')->count())
+                    ->badge(),
                 IconColumn::make('is_enabled')->label('Aktif')->boolean(),
                 TextColumn::make('last_test_status')
                     ->label('Status')
