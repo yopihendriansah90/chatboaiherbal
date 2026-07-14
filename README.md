@@ -9,7 +9,7 @@
 
 ## Chatbot Herbal Telegram
 
-MVP ini menerima pesan melalui webhook Telegram, memakai AI hanya sebagai parser/renderer terbatas, serta mengambil seluruh rekomendasi dari `12_TERBARU_Produk_Herbal_Terstruktur_n8n_Gemini.json`. State aktif disimpan dalam cache, sedangkan identitas pengguna, sesi, dan riwayat pesan disimpan terenkripsi di database untuk monitoring admin.
+MVP ini menerima pesan melalui webhook Telegram dan memakai AI hanya sebagai parser/renderer terbatas. Runtime produk mengutamakan database, sedangkan `12_TERBARU_Produk_Herbal_Terstruktur_n8n_Gemini.json` menjadi sumber import dan fallback selama transisi. State aktif disimpan dalam cache, sedangkan identitas pengguna, sesi, dan riwayat pesan disimpan terenkripsi di database untuk monitoring admin.
 
 ### Konfigurasi
 
@@ -40,7 +40,32 @@ Bot mendukung `/start` dan `/reset`. Tanda darurat akan menghentikan rekomendasi
 
 ### Arsitektur guardrail
 
-Model AI hanya digunakan untuk mengubah pesan menjadi intent, kategori keluhan, dan fakta terstruktur. Model tidak menulis jawaban Telegram dan tidak memilih produk. Domain gate Laravel menolak pesan di luar kesehatan, sedangkan produk dipilih dari matriks kurasi pada `config/herbal_rules.php`. Seluruh sapaan, klarifikasi, screening, rekomendasi, pantangan, dan respons darurat dirender dari template Laravel.
+Model AI hanya digunakan untuk mengubah pesan menjadi domain, intent, kategori keluhan, dan fakta terstruktur. Model tidak memilih produk. Domain router Laravel memilih `company_profile` atau `health_herbal`; produk dipilih dari matriks kurasi database dengan `config/herbal_rules.php` sebagai fallback deployment. Seluruh keputusan screening, rekomendasi, pantangan, harga, stok, link, dan respons darurat ditentukan Laravel.
+
+### Domain Pack Walatra
+
+Satu Business Profile **Walatra Herbal** memiliki dua Domain Pack yang dapat diaktifkan melalui **Operasional → Pengaturan Bot → Domain Pack**:
+
+- **Profile Company** untuk profil, alamat, kontak, jam operasional, legalitas, pemesanan, pengiriman, reseller, dan FAQ.
+- **AI Asisten Herbal** untuk keluhan, screening, edukasi, pantangan, serta rekomendasi produk.
+
+Informasi perusahaan dikelola melalui **Walatra Herbal → Profil Perusahaan**. Produk, klaim tervalidasi, pantangan, harga, stok, link, serta matriks kategori dikelola melalui menu **Produk Herbal** dan **Kategori & Rekomendasi**.
+
+Katalog awal dapat divalidasi atau diimpor ulang secara idempotent:
+
+```bash
+php artisan herbal:import-catalog --dry-run
+php artisan herbal:import-catalog
+php artisan herbal:import-catalog --update # timpa data produk dari JSON secara eksplisit
+```
+
+RAG belum menjadi dependensi. Informasi perusahaan dan produk hanya berasal dari data terstruktur yang dikelola admin.
+
+### Prompt AI yang dapat dikustomisasi
+
+Menu **Walatra Herbal → Prompt AI** menyediakan prompt branding, parser, dan renderer per domain. Perubahan disimpan sebagai draft, diperiksa oleh policy validator, lalu dipublikasikan dengan versi baru. Versi aktif dapat dikembalikan ke default.
+
+Core JSON schema, larangan membuat produk/harga/link, prompt-injection guard, dan batas kewenangan renderer tetap berada di source code serta tidak dapat dihapus melalui panel. Prompt custom hanya mengubah branding dan gaya komunikasi.
 
 Groq digunakan sebagai provider aktif saat `AI_PROVIDER=groq`; Gemini tetap tersedia di kode tetapi tidak dipanggil. Gunakan `AI_PROVIDER=gemini` untuk Gemini saja atau `AI_PROVIDER=auto` untuk mencoba Gemini lalu berpindah ke Groq ketika kuota Gemini habis.
 
@@ -129,7 +154,7 @@ Setelah deployment, jalankan:
 php artisan migrate --seed --force
 ```
 
-Seeder standar dipisahkan menjadi `AdminUserSeeder`, `AiProviderSeeder`, `AiModelSeeder`, `AiModelPriceSeeder`, dan `BotSettingSeeder`. Seluruh seeder bersifat idempotent dan aman dijalankan kembali. API key serta secret Telegram tetap dibaca dari `.env`; nilai tersebut tidak ditulis ke source code. Harga awal merupakan snapshot USD bertanggal tetap dengan URL sumber resmi. Untuk perubahan harga berikutnya, tambahkan versi baru melalui panel agar histori tetap utuh.
+Seeder standar juga menyiapkan Business Profile Walatra, dua Domain Pack, prompt default, 13 kategori rekomendasi, 18 produk, dan 44 baris komposisi. Seluruh seeder bersifat idempotent dan aman dijalankan kembali. API key serta secret Telegram tidak ditulis ke source code. Harga awal model AI merupakan snapshot USD bertanggal tetap dengan URL sumber resmi. Untuk perubahan harga berikutnya, tambahkan versi baru melalui panel agar histori tetap utuh.
 
 Seeder tidak membuat kurs USD/IDR karena kurs dikelola manual dan berubah dari waktu ke waktu. Setelah deployment pertama, tambahkan **Nilai Dolar** terbaru melalui panel admin.
 

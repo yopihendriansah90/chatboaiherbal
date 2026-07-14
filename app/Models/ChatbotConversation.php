@@ -17,6 +17,7 @@ class ChatbotConversation extends Model
         'channel',
         'external_conversation_id',
         'status',
+        'domain_code',
         'category',
         'product_code',
         'is_emergency',

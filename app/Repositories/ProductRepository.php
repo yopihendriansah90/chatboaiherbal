@@ -2,8 +2,11 @@
 
 namespace App\Repositories;
 
+use App\Models\Product;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
+use Throwable;
 
 class ProductRepository
 {
@@ -13,6 +16,11 @@ class ProductRepository
 
     public function all(): array
     {
+        $database = $this->databaseProducts();
+        if ($database !== null && $database !== []) {
+            return $database;
+        }
+
         return $this->load()['produk'];
     }
 
@@ -168,5 +176,58 @@ class ProductRepository
         }
 
         return $this->data = $data;
+    }
+
+    /** @return array<int, array<string, mixed>>|null */
+    private function databaseProducts(): ?array
+    {
+        try {
+            if (! Schema::hasTable('products') || ! Product::query()->where('is_active', true)->exists()) {
+                return null;
+            }
+
+            return Product::query()
+                ->where('is_active', true)
+                ->where('status', 'active')
+                ->with([
+                    'ingredients',
+                    'links' => fn ($query) => $query->where('is_active', true)->orderByDesc('is_primary'),
+                    'claims' => fn ($query) => $query->where('is_active', true)->where('approval_status', 'approved'),
+                    'contraindications' => fn ($query) => $query->where('is_active', true),
+                    'prices' => fn ($query) => $query->where('is_active', true)->latest('effective_from'),
+                    'inventory',
+                ])
+                ->orderBy('id')
+                ->get()
+                ->map(function (Product $product): array {
+                    $link = $product->links->first();
+
+                    return [
+                        'kode' => $product->code,
+                        'nama_produk' => $product->name,
+                        'link_produk' => $link?->url ?? '',
+                        'catatan_tambahan' => $product->additional_notes ?? '',
+                        'komposisi' => $product->ingredients->map(fn ($ingredient): array => [
+                            'nama_bahan' => $ingredient->name,
+                            'kandungan_utama' => $ingredient->pivot->main_content ?? '',
+                            'gejala_penyakit' => $ingredient->pivot->symptom_context ?? '',
+                            'narasi_membantu_penyembuhan_herbal' => $ingredient->pivot->approved_narrative ?? '',
+                            'pantangan_dan_aturan_konsumsi' => $ingredient->pivot->legacy_warning ?? '',
+                        ])->all(),
+                        '_claims' => $product->claims->map(fn ($claim): array => ['type' => $claim->type, 'text' => $claim->claim_text])->all(),
+                        '_contraindications' => $product->contraindications->map(fn ($rule): array => [
+                            'type' => $rule->type, 'code' => $rule->code, 'severity' => $rule->severity, 'guidance' => $rule->guidance,
+                        ])->all(),
+                        '_price' => $product->prices->first()?->price,
+                        '_currency' => $product->prices->first()?->currency,
+                        '_stock' => $product->inventory ? [
+                            'tracked' => $product->inventory->track_stock,
+                            'available' => max(0, $product->inventory->available_quantity - $product->inventory->reserved_quantity),
+                        ] : null,
+                    ];
+                })->all();
+        } catch (Throwable) {
+            return null;
+        }
     }
 }

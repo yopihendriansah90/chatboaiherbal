@@ -16,8 +16,12 @@ class DatabaseSeeder extends Seeder
             AiProviderSeeder::class,
             AiModelSeeder::class,
             AiModelPriceSeeder::class,
+            BusinessProfileSeeder::class,
+            DomainPackSeeder::class,
             BotSettingSeeder::class,
             ChannelIntegrationSeeder::class,
+            PromptTemplateSeeder::class,
+            HerbalCatalogSeeder::class,
         ]);
     }
 }

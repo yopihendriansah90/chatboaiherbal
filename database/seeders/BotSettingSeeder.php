@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\AiModel;
 use App\Models\BotSetting;
+use App\Models\BusinessProfile;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use RuntimeException;
@@ -12,7 +13,10 @@ class BotSettingSeeder extends Seeder
 {
     public function run(): void
     {
-        if (BotSetting::query()->exists()) {
+        $businessId = BusinessProfile::query()->where('slug', 'walatra-herbal')->value('id');
+        if ($setting = BotSetting::query()->first()) {
+            $setting->update(['business_profile_id' => $setting->business_profile_id ?: $businessId]);
+
             return;
         }
 
@@ -24,6 +28,7 @@ class BotSettingSeeder extends Seeder
         ];
 
         BotSetting::query()->create([
+            'business_profile_id' => $businessId,
             'telegram_bot_token' => config('services.telegram.token'),
             'telegram_webhook_secret' => config('services.telegram.webhook_secret'),
             'telegram_webhook_url' => config('services.telegram.webhook_url'),
@@ -43,6 +48,8 @@ class BotSettingSeeder extends Seeder
             'renderer_max_words' => 45,
             'memory_ttl_hours' => 24,
             'history_limit' => 6,
+            'allow_domain_switching' => true,
+            'ambiguous_domain_behavior' => 'clarify',
             'chat_history_enabled' => true,
             'chat_history_retention_days' => 90,
             'inactive_contact_days' => 30,

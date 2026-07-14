@@ -17,7 +17,9 @@ class HerbalPromptTest extends TestCase
         $this->assertStringContainsString('Jangan menjawab pertanyaan', $instruction);
         $this->assertStringContainsString('off_topic', $instruction);
         $this->assertStringContainsString('SCHEMA JSON WAJIB', $instruction);
+        $this->assertStringContainsString('selalu milik subject yang mengalami keluhan', $instruction);
         $this->assertArrayHasKey('intent', $schema['properties']);
+        $this->assertArrayHasKey('domain', $schema['properties']);
         $this->assertArrayHasKey('confidence', $schema['properties']);
         $this->assertArrayNotHasKey('reply', $schema['properties']);
         $this->assertArrayNotHasKey('product_codes', $schema['properties']);

@@ -189,6 +189,7 @@ class ChatOrchestrator
     {
         $state = $this->store->get($conversation->uuid);
         $conversation->update([
+            'domain_code' => $state['active_domain'] ?? null,
             'category' => $state['facts']['category'] ?? null,
             'product_code' => collect($state['offered_products'] ?? [])->last(),
             'is_emergency' => ($state['phase'] ?? null) === 'emergency',

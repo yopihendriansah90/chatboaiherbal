@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class BotSetting extends Model
 {
     protected $fillable = [
+        'business_profile_id',
         'telegram_bot_token',
         'telegram_webhook_secret',
         'telegram_webhook_url',
@@ -28,6 +29,8 @@ class BotSetting extends Model
         'renderer_max_words',
         'memory_ttl_hours',
         'history_limit',
+        'allow_domain_switching',
+        'ambiguous_domain_behavior',
         'chat_history_enabled',
         'chat_history_retention_days',
         'inactive_contact_days',
@@ -58,6 +61,7 @@ class BotSetting extends Model
             'renderer_max_words' => 'integer',
             'memory_ttl_hours' => 'integer',
             'history_limit' => 'integer',
+            'allow_domain_switching' => 'boolean',
             'chat_history_enabled' => 'boolean',
             'chat_history_retention_days' => 'integer',
             'inactive_contact_days' => 'integer',
@@ -72,5 +76,10 @@ class BotSetting extends Model
     public function rendererModelSelection(): BelongsTo
     {
         return $this->belongsTo(AiModel::class, 'renderer_ai_model_id');
+    }
+
+    public function businessProfile(): BelongsTo
+    {
+        return $this->belongsTo(BusinessProfile::class);
     }
 }

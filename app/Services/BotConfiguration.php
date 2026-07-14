@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\BotSetting;
+use App\Models\BusinessProfile;
+use App\Models\DomainPack;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -51,6 +53,8 @@ class BotConfiguration
                 'chatbot.renderer_max_words' => $settings->renderer_max_words,
                 'chatbot.memory_ttl_hours' => $settings->memory_ttl_hours,
                 'chatbot.history_limit' => $settings->history_limit,
+                'chatbot.allow_domain_switching' => $settings->allow_domain_switching,
+                'chatbot.ambiguous_domain_behavior' => $settings->ambiguous_domain_behavior,
                 'chatbot.history_enabled' => $settings->chat_history_enabled,
                 'chatbot.history_retention_days' => $settings->chat_history_retention_days,
                 'chatbot.inactive_contact_days' => $settings->inactive_contact_days,
@@ -77,6 +81,9 @@ class BotConfiguration
     {
         app(ChannelConfiguration::class)->saveTelegram($values, $userId);
         $setting = BotSetting::query()->firstOrNew();
+        $enabledDomains = array_values(array_unique($values['enabled_domain_codes'] ?? []));
+        $defaultDomain = $values['default_domain_code'] ?? 'health_herbal';
+        unset($values['enabled_domain_codes'], $values['default_domain_code']);
 
         foreach (['telegram_bot_token', 'telegram_webhook_secret', 'groq_api_key'] as $secret) {
             if (blank($values[$secret] ?? null)) {
@@ -88,6 +95,21 @@ class BotConfiguration
         $setting->updated_by = $userId;
         $changedFields = array_keys($setting->getDirty());
         $setting->save();
+
+        if ($setting->business_profile_id && Schema::hasTable('business_domain_packs')) {
+            $business = BusinessProfile::query()->find($setting->business_profile_id);
+            if ($business && $enabledDomains !== []) {
+                foreach (DomainPack::query()->whereIn('code', $enabledDomains)->get() as $domain) {
+                    $business->domainPacks()->syncWithoutDetaching([$domain->id]);
+                }
+                foreach ($business->domainPacks as $domain) {
+                    $business->domainPacks()->updateExistingPivot($domain->id, [
+                        'is_enabled' => in_array($domain->code, $enabledDomains, true),
+                        'is_default' => $domain->code === $defaultDomain && in_array($domain->code, $enabledDomains, true),
+                    ]);
+                }
+            }
+        }
 
         Log::info('Bot settings updated', [
             'user_id' => $userId,
@@ -157,6 +179,8 @@ class BotConfiguration
             'renderer_max_words' => $setting?->renderer_max_words ?? config('chatbot.renderer_max_words', 45),
             'memory_ttl_hours' => $setting?->memory_ttl_hours ?? config('chatbot.memory_ttl_hours', 24),
             'history_limit' => $setting?->history_limit ?? config('chatbot.history_limit', 6),
+            'allow_domain_switching' => $setting?->allow_domain_switching ?? true,
+            'ambiguous_domain_behavior' => $setting?->ambiguous_domain_behavior ?? 'clarify',
             'chat_history_enabled' => $setting?->chat_history_enabled ?? config('chatbot.history_enabled', true),
             'chat_history_retention_days' => $setting?->chat_history_retention_days ?? config('chatbot.history_retention_days', 90),
             'inactive_contact_days' => $setting?->inactive_contact_days ?? config('chatbot.inactive_contact_days', 30),
@@ -171,7 +195,29 @@ class BotConfiguration
             'parser_ai_model_id' => $setting?->parser_ai_model_id ?? $models->defaultParserModelId(),
             'renderer_ai_model_id' => $setting?->renderer_ai_model_id ?? $models->defaultRendererModelId(),
             'fallback_ai_model_ids' => $setting?->fallback_ai_model_ids ?? [],
+            'business_profile_id' => $setting?->business_profile_id ?? app(BusinessProfileResolver::class)->current()?->id,
+            'enabled_domain_codes' => $this->domainFormData($setting?->business_profile_id)['enabled'],
+            'default_domain_code' => $this->domainFormData($setting?->business_profile_id)['default'],
         ];
+    }
+
+    private function domainFormData(?int $businessId): array
+    {
+        try {
+            if (! $businessId || ! Schema::hasTable('business_domain_packs')) {
+                return ['enabled' => ['health_herbal'], 'default' => 'health_herbal'];
+            }
+            $business = BusinessProfile::query()->with('domainPacks')->find($businessId);
+            if (! $business) {
+                return ['enabled' => ['health_herbal'], 'default' => 'health_herbal'];
+            }
+            $enabled = $business->domainPacks->filter(fn ($domain) => (bool) $domain->pivot->is_enabled)->pluck('code')->all();
+            $default = $business->domainPacks->first(fn ($domain) => (bool) $domain->pivot->is_default)?->code;
+
+            return ['enabled' => $enabled ?: ['health_herbal'], 'default' => $default ?: 'health_herbal'];
+        } catch (Throwable) {
+            return ['enabled' => ['health_herbal'], 'default' => 'health_herbal'];
+        }
     }
 
     private function telegramValue(string $attribute, string $fallbackConfig): ?string

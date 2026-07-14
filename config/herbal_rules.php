@@ -31,4 +31,8 @@ return [
         'oral' => 'kenyamanan mulut dan tenggorokan',
         'unsupported_health' => 'daya tahan tubuh agar tetap sehat dan fit',
     ],
+    'soft_selling_mechanisms' => [
+        'KGE' => 'Kandungan gamatnya memberikan dukungan nutrisi seperti kolagen dan protein untuk membantu pemeliharaan jaringan tubuh dan kenyamanan sendi.',
+        'KSL' => 'Perpaduan jahe, temulawak, kunyit, dan rempah lainnya membantu memberi rasa hangat sekaligus mendukung kenyamanan pencernaan.',
+    ],
 ];

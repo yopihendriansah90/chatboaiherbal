@@ -25,9 +25,16 @@ class ConversationStore
 
     public function fresh(): array
     {
+        $healthFacts = ['subject' => null, 'sex' => null, 'complaint' => null, 'category' => null, 'age_group' => null, 'pregnancy' => null, 'allergies' => null, 'conditions' => null, 'medications' => null, 'duration' => null, 'red_flags' => null, 'product_requested' => false];
+
         return [
+            'active_domain' => null,
             'phase' => 'complaint',
-            'facts' => ['subject' => null, 'sex' => null, 'complaint' => null, 'category' => null, 'age_group' => null, 'pregnancy' => null, 'allergies' => null, 'conditions' => null, 'medications' => null, 'duration' => null, 'red_flags' => null],
+            'facts' => $healthFacts,
+            'domain_states' => [
+                'health_herbal' => ['phase' => 'complaint', 'facts' => $healthFacts, 'missing_fields' => [], 'offered_products' => []],
+                'company_profile' => ['last_intent' => null],
+            ],
             'history' => [],
             'offered_products' => [],
             'missing_fields' => [],
@@ -36,6 +43,6 @@ class ConversationStore
 
     private function key(int|string $chatId): string
     {
-        return 'chatbot:v4:conversation:'.$chatId;
+        return 'chatbot:v5:conversation:'.$chatId;
     }
 }

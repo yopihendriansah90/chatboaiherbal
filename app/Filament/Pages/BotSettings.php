@@ -4,10 +4,12 @@ namespace App\Filament\Pages;
 
 use App\Services\AiProviderResolver;
 use App\Services\BotConfiguration;
+use App\Services\BusinessProfileResolver;
 use App\Services\TelegramClient;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -137,6 +139,32 @@ class BotSettings extends Page
                                 Section::make('Cara pengaturan')
                                     ->description('API key dan daftar model dikelola melalui menu Operasional → AI Providers. Harga token dikelola pada model masing-masing.')
                                     ->compact(),
+                            ]),
+                        Tab::make('Domain Pack')
+                            ->icon('heroicon-o-squares-2x2')
+                            ->schema([
+                                Section::make('Layanan chatbot')
+                                    ->description('Walatra dapat melayani informasi perusahaan dan konsultasi herbal dalam satu chatbot.')
+                                    ->schema([
+                                        CheckboxList::make('enabled_domain_codes')
+                                            ->label('Domain aktif')
+                                            ->options(fn (): array => app(BusinessProfileResolver::class)->domainOptions())
+                                            ->required()
+                                            ->live()
+                                            ->columns(2),
+                                        Select::make('default_domain_code')
+                                            ->label('Domain utama')
+                                            ->options(fn (): array => app(BusinessProfileResolver::class)->domainOptions())
+                                            ->required()
+                                            ->in(fn ($get): array => $get('enabled_domain_codes') ?: ['health_herbal']),
+                                        Toggle::make('allow_domain_switching')
+                                            ->label('Izinkan perpindahan domain dalam percakapan')
+                                            ->helperText('Pengguna dapat beralih dari pertanyaan perusahaan ke konsultasi herbal tanpa /reset.'),
+                                        Select::make('ambiguous_domain_behavior')
+                                            ->label('Jika domain tidak jelas')
+                                            ->options(['clarify' => 'Tanyakan klarifikasi'])
+                                            ->required(),
+                                    ]),
                             ]),
                         Tab::make('Percakapan')
                             ->icon('heroicon-o-chat-bubble-left-right')
