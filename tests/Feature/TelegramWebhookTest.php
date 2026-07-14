@@ -69,6 +69,32 @@ class TelegramWebhookTest extends TestCase
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
     }
 
+    public function test_casual_consultation_openers_are_understood_without_ai(): void
+    {
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true]), '*' => Http::response([], 500)]);
+
+        $messages = [
+            'mau konsul dulu',
+            'mau tanya tanya dulu boleh?',
+            'mau tanya dong',
+            'mau tanya',
+            'aku ingin konsultasi dulu',
+            'boleh nanya nih?',
+            'saya ingin bertanya',
+            'pengen konsul kak',
+            'izin bertanya ya',
+            'mau curhat dulu boleh gak?',
+            'ada yang mau saya tanya',
+        ];
+
+        foreach ($messages as $index => $message) {
+            $this->send(360 + $index, $message)->assertOk();
+            $this->assertTelegramTextContains('Tentu boleh dong');
+        }
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
     public function test_off_topic_and_prompt_injection_are_rejected_without_ai(): void
     {
         Http::fake(['api.telegram.org/*' => Http::response(['ok' => true]), '*' => Http::response([], 500)]);

@@ -825,7 +825,18 @@ class HerbalChatbot
         $normalized = $this->normalizeSocialText($message);
 
         return (bool) preg_match(
-            '/^(?:(?:aku|saya)\s+)?(?:boleh|mau|ingin|pengen|bisa)\s+(?:tanya|nanya|konsultasi)(?:\s+(?:sesuatu|dulu|nih|dong|kak|ga|gak|nggak))?$/u',
+            '/^
+                (?:(?:aku|saya|kami)\s+)?
+                (?:
+                    (?:boleh|mau|ingin|pengen|bisa)\s+
+                        (?:tanya(?:\s+tanya)?|nanya(?:\s+nanya)?|bertanya|konsul(?:tasi)?|konsultasi|curhat)
+                    |
+                    izin\s+(?:tanya|nanya|bertanya|konsul(?:tasi)?|konsultasi|curhat)
+                    |
+                    ada\s+yang\s+(?:mau|ingin|pengen)\s+(?:aku\s+|saya\s+)?(?:tanya|nanya|konsultasikan)
+                )
+                (?:\s+(?:sesuatu|dulu|nih|dong|ya|kak|min|boleh|ga|gak|nggak|tidak|sih|kah))*
+            $/ux',
             $normalized,
         );
     }
