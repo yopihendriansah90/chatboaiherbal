@@ -61,6 +61,6 @@ class ChatbotConversation extends Model
 
     public function messages(): HasMany
     {
-        return $this->hasMany(ChatbotMessage::class)->orderBy('occurred_at')->orderBy('id');
+        return $this->hasMany(ChatbotMessage::class)->orderBy('id');
     }
 }

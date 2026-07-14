@@ -50,7 +50,8 @@ class TelegramChannel implements MessagingChannel
             text: trim($text),
             messageType: str_starts_with(trim($text), '/') ? 'command' : 'text',
             profile: $profile,
-            occurredAt: CarbonImmutable::createFromTimestampUTC((int) data_get($message, 'date', now()->timestamp)),
+            occurredAt: CarbonImmutable::createFromTimestampUTC((int) data_get($message, 'date', now()->timestamp))
+                ->setTimezone((string) config('app.timezone', 'UTC')),
         );
     }
 

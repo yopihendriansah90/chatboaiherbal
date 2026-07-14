@@ -7,11 +7,7 @@ use App\Filament\Resources\ChatbotConversations\Pages\ViewChatbotConversation;
 use App\Models\ChatbotConversation;
 use BackedEnum;
 use Filament\Actions\ViewAction;
-use Filament\Infolists\Components\RepeatableEntry;
-use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -80,42 +76,6 @@ class ChatbotConversationResource extends Resource
             ->recordActions([
                 ViewAction::make()->label('Lihat chat')->url(fn (ChatbotConversation $record): string => static::getUrl('view', ['record' => $record])),
             ]);
-    }
-
-    public static function infolist(Schema $schema): Schema
-    {
-        return $schema->components([
-            Section::make('Ringkasan percakapan')
-                ->columns(4)
-                ->schema([
-                    TextEntry::make('contact.display_name')->label('Pengguna'),
-                    TextEntry::make('channel')->label('Channel')->badge(),
-                    TextEntry::make('status')->label('Status')->badge(),
-                    TextEntry::make('message_count')->label('Jumlah pesan'),
-                    TextEntry::make('category')->label('Kategori')->placeholder('-'),
-                    TextEntry::make('product_code')->label('Produk')->placeholder('-'),
-                    TextEntry::make('started_at')->label('Dimulai')->dateTime('d M Y H:i:s'),
-                    TextEntry::make('last_message_at')->label('Terakhir')->dateTime('d M Y H:i:s'),
-                ]),
-            Section::make('Riwayat chat')
-                ->schema([
-                    RepeatableEntry::make('messages')
-                        ->label('')
-                        ->schema([
-                            TextEntry::make('direction')
-                                ->label('Pengirim')
-                                ->formatStateUsing(fn (string $state): string => $state === 'incoming' ? 'Pengguna' : 'Chatbot')
-                                ->badge()
-                                ->color(fn (string $state): string => $state === 'incoming' ? 'info' : 'success'),
-                            TextEntry::make('content')->label('Pesan')->columnSpanFull(),
-                            TextEntry::make('occurred_at')->label('Waktu')->dateTime('d M Y H:i:s'),
-                            TextEntry::make('delivery_status')->label('Pengiriman')->badge()->placeholder('-'),
-                            TextEntry::make('error_code')->label('Error')->placeholder('-'),
-                        ])
-                        ->columns(3)
-                        ->contained(false),
-                ]),
-        ]);
     }
 
     public static function getPages(): array
