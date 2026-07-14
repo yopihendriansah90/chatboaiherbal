@@ -36,6 +36,6 @@ class ConversationStore
 
     private function key(int|string $chatId): string
     {
-        return 'chatbot:v3:conversation:'.$chatId;
+        return 'chatbot:v4:conversation:'.$chatId;
     }
 }

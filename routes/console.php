@@ -1,11 +1,16 @@
 <?php
 
+use App\Models\ChatbotChannelIdentity;
+use App\Models\ChatbotContact;
+use App\Models\ChatbotConversation;
+use App\Models\ChatbotMessage;
 use App\Services\BotConfiguration;
 use App\Services\DomainGate;
 use App\Services\ProductRuleEngine;
 use App\Services\TelegramClient;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 use Symfony\Component\Console\Command\Command;
 
 Artisan::command('inspire', function () {
@@ -25,7 +30,7 @@ Artisan::command('telegram:webhook {action=set : set, info, atau delete}', funct
         'set' => $telegram->call('setWebhook', [
             'url' => $configuration->telegramWebhookUrl(),
             'secret_token' => $configuration->telegramWebhookSecret(),
-            'allowed_updates' => ['message'],
+            'allowed_updates' => ['message', 'my_chat_member'],
         ]),
         'info' => $telegram->call('getWebhookInfo'),
         'delete' => $telegram->call('deleteWebhook'),
@@ -59,3 +64,34 @@ Artisan::command('chatbot:evaluate', function () {
         ? Command::SUCCESS
         : Command::FAILURE;
 })->purpose('Menjalankan evaluasi deterministik domain dan matriks produk');
+
+Artisan::command('chatbot:purge-history {--days= : Override masa retensi}', function () {
+    $days = max(1, (int) ($this->option('days') ?: config('chatbot.history_retention_days', 90)));
+    $cutoff = now()->subDays($days);
+    $deleted = ChatbotMessage::query()->where('occurred_at', '<', $cutoff)->delete();
+
+    ChatbotConversation::query()
+        ->where('status', 'active')
+        ->where('last_message_at', '<', $cutoff)
+        ->update(['status' => 'completed', 'closed_at' => now()]);
+
+    ChatbotConversation::query()->withCount('messages')->chunkById(200, function ($conversations): void {
+        foreach ($conversations as $conversation) {
+            $conversation->update(['message_count' => $conversation->messages_count]);
+        }
+    });
+
+    $inactiveCutoff = now()->subDays(max(1, (int) config('chatbot.inactive_contact_days', 30)));
+    ChatbotContact::query()
+        ->where('status', 'active')
+        ->where('last_seen_at', '<', $inactiveCutoff)
+        ->update(['status' => 'inactive']);
+    ChatbotChannelIdentity::query()
+        ->where('status', 'active')
+        ->where('last_seen_at', '<', $inactiveCutoff)
+        ->update(['status' => 'inactive']);
+
+    $this->info("{$deleted} pesan yang melewati retensi telah dihapus.");
+})->purpose('Menghapus riwayat chat lama dan memperbarui status kontak');
+
+Schedule::command('chatbot:purge-history')->dailyAt('02:30')->withoutOverlapping();

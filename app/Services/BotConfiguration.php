@@ -51,6 +51,9 @@ class BotConfiguration
                 'chatbot.renderer_max_words' => $settings->renderer_max_words,
                 'chatbot.memory_ttl_hours' => $settings->memory_ttl_hours,
                 'chatbot.history_limit' => $settings->history_limit,
+                'chatbot.history_enabled' => $settings->chat_history_enabled,
+                'chatbot.history_retention_days' => $settings->chat_history_retention_days,
+                'chatbot.inactive_contact_days' => $settings->inactive_contact_days,
             ]);
         } catch (Throwable $exception) {
             Log::warning('Bot settings could not be applied', ['exception' => $exception::class]);
@@ -72,6 +75,7 @@ class BotConfiguration
 
     public function save(array $values, ?int $userId = null): BotSetting
     {
+        app(ChannelConfiguration::class)->saveTelegram($values, $userId);
         $setting = BotSetting::query()->firstOrNew();
 
         foreach (['telegram_bot_token', 'telegram_webhook_secret', 'groq_api_key'] as $secret) {
@@ -103,21 +107,27 @@ class BotConfiguration
 
     public function telegramToken(): ?string
     {
-        return $this->telegramValue('telegram_bot_token', 'services.telegram.token');
+        return app(ChannelConfiguration::class)->telegramToken()
+            ?: $this->telegramValue('telegram_bot_token', 'services.telegram.token');
     }
 
     public function telegramWebhookSecret(): ?string
     {
-        return $this->telegramValue('telegram_webhook_secret', 'services.telegram.webhook_secret');
+        return app(ChannelConfiguration::class)->telegramWebhookSecret()
+            ?: $this->telegramValue('telegram_webhook_secret', 'services.telegram.webhook_secret');
     }
 
     public function telegramWebhookUrl(): ?string
     {
-        return $this->telegramValue('telegram_webhook_url', 'services.telegram.webhook_url');
+        return app(ChannelConfiguration::class)->telegramWebhookUrl()
+            ?: $this->telegramValue('telegram_webhook_url', 'services.telegram.webhook_url');
     }
 
     public function telegramTimeout(): int
     {
+        if ($timeout = app(ChannelConfiguration::class)->telegramTimeout()) {
+            return $timeout;
+        }
         $settings = $this->current();
 
         return (int) ($settings?->is_active
@@ -129,12 +139,15 @@ class BotConfiguration
     {
         $setting = $this->current();
         $models = app(AiProviderResolver::class);
+        $telegram = app(ChannelConfiguration::class)->telegram();
+        $telegramCredentials = $telegram?->credentials ?? [];
+        $telegramSettings = $telegram?->settings ?? [];
 
         return [
             'telegram_bot_token' => null,
             'telegram_webhook_secret' => null,
-            'telegram_webhook_url' => $setting?->telegram_webhook_url ?? config('services.telegram.webhook_url'),
-            'telegram_timeout' => $setting?->telegram_timeout ?? config('services.telegram.timeout', 10),
+            'telegram_webhook_url' => $telegramSettings['webhook_url'] ?? $setting?->telegram_webhook_url ?? config('services.telegram.webhook_url'),
+            'telegram_timeout' => $telegramSettings['timeout'] ?? $setting?->telegram_timeout ?? config('services.telegram.timeout', 10),
             'groq_api_key' => null,
             'parser_model' => $setting?->parser_model ?? config('services.groq.parser_model'),
             'renderer_model' => $setting?->renderer_model ?? config('services.groq.renderer_model'),
@@ -144,9 +157,12 @@ class BotConfiguration
             'renderer_max_words' => $setting?->renderer_max_words ?? config('chatbot.renderer_max_words', 45),
             'memory_ttl_hours' => $setting?->memory_ttl_hours ?? config('chatbot.memory_ttl_hours', 24),
             'history_limit' => $setting?->history_limit ?? config('chatbot.history_limit', 6),
+            'chat_history_enabled' => $setting?->chat_history_enabled ?? config('chatbot.history_enabled', true),
+            'chat_history_retention_days' => $setting?->chat_history_retention_days ?? config('chatbot.history_retention_days', 90),
+            'inactive_contact_days' => $setting?->inactive_contact_days ?? config('chatbot.inactive_contact_days', 30),
             'is_active' => $setting?->is_active ?? true,
-            'telegram_token_configured' => filled($setting?->telegram_bot_token ?: config('services.telegram.token')),
-            'webhook_secret_configured' => filled($setting?->telegram_webhook_secret ?: config('services.telegram.webhook_secret')),
+            'telegram_token_configured' => filled(($telegramCredentials['bot_token'] ?? null) ?: $setting?->telegram_bot_token ?: config('services.telegram.token')),
+            'webhook_secret_configured' => filled(($telegramCredentials['webhook_secret'] ?? null) ?: $setting?->telegram_webhook_secret ?: config('services.telegram.webhook_secret')),
             'groq_key_configured' => filled($setting?->groq_api_key ?: config('services.groq.api_key')),
             'parser_provider' => $setting?->parser_provider ?? config('chatbot.parser_provider', 'groq'),
             'renderer_provider' => $setting?->renderer_provider ?? config('chatbot.renderer_provider', 'groq'),

@@ -50,4 +50,14 @@ class AiUsageRecord extends Model
     {
         return $this->belongsTo(ExchangeRate::class);
     }
+
+    public function chatbotConversation(): BelongsTo
+    {
+        return $this->belongsTo(ChatbotConversation::class);
+    }
+
+    public function chatbotMessage(): BelongsTo
+    {
+        return $this->belongsTo(ChatbotMessage::class);
+    }
 }

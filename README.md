@@ -9,7 +9,7 @@
 
 ## Chatbot Herbal Telegram
 
-MVP ini menerima pesan melalui webhook Telegram, menggunakan Gemini untuk alur edukasi dan screening, serta mengambil seluruh rekomendasi dari `12_TERBARU_Produk_Herbal_Terstruktur_n8n_Gemini.json`. Percakapan disimpan pada cache file selama 24 jam dan tidak memerlukan database.
+MVP ini menerima pesan melalui webhook Telegram, memakai AI hanya sebagai parser/renderer terbatas, serta mengambil seluruh rekomendasi dari `12_TERBARU_Produk_Herbal_Terstruktur_n8n_Gemini.json`. State aktif disimpan dalam cache, sedangkan identitas pengguna, sesi, dan riwayat pesan disimpan terenkripsi di database untuk monitoring admin.
 
 ### Konfigurasi
 
@@ -85,7 +85,7 @@ Informasi yang sama tersedia langsung di panel Filament pada `/admin/system-heal
 
 ### Pengaturan bot melalui Filament
 
-Admin dapat membuka `/admin/bot-settings` atau menu **Operasional → Pengaturan Bot** untuk mengelola Telegram, routing AI, natural renderer, dan memori percakapan. Token Telegram dan webhook secret disimpan terenkripsi di tabel `bot_settings`, sedangkan API key AI disimpan terenkripsi per provider di tabel `ai_providers`. Input secret yang dibiarkan kosong mempertahankan nilai lama.
+Admin dapat membuka `/admin/bot-settings` atau menu **Operasional → Pengaturan Bot** untuk mengelola Telegram, routing AI, natural renderer, memori, dan retensi percakapan. Token Telegram dan webhook secret dipindahkan bertahap ke registry `channel_integrations`; tabel `bot_settings` tetap menjadi fallback selama masa transisi. API key AI disimpan terenkripsi per provider di tabel `ai_providers`. Input secret yang dibiarkan kosong mempertahankan nilai lama.
 
 Konfigurasi database yang aktif menggantikan nilai `.env`, sementara `.env` tetap menjadi fallback untuk secret yang belum disimpan. Halaman menyediakan action untuk menguji Telegram/Groq serta memeriksa, memasang, dan menghapus webhook. Jalankan migrasi sebelum menggunakan halaman:
 
@@ -133,7 +133,28 @@ Seeder standar dipisahkan menjadi `AdminUserSeeder`, `AiProviderSeeder`, `AiMode
 
 Seeder tidak membuat kurs USD/IDR karena kurs dikelola manual dan berubah dari waktu ke waktu. Setelah deployment pertama, tambahkan **Nilai Dolar** terbaru melalui panel admin.
 
-Di production, token bot, webhook secret, dan webhook URL Telegram dapat disimpan langsung melalui **Operasional → Pengaturan Bot → Telegram**. Runtime Telegram dan validasi webhook memprioritaskan tabel `bot_settings`; variabel Telegram pada `.env` hanya fallback opsional dan boleh dikosongkan. Secret disimpan memakai encrypted cast Laravel dan tidak pernah ditampilkan kembali oleh form.
+Di production, token bot, webhook secret, dan webhook URL Telegram dapat disimpan langsung melalui **Operasional → Pengaturan Bot → Telegram**. Runtime Telegram dan validasi webhook memprioritaskan record `telegram-primary` pada `channel_integrations`, lalu memakai `bot_settings` dan `.env` sebagai fallback transisi. Secret disimpan memakai encrypted cast Laravel dan tidak pernah ditampilkan kembali oleh form.
+
+### Pengguna dan riwayat percakapan
+
+Semua pesan Telegram baru dinormalisasi melalui channel adapter sebelum masuk ke chatbot core. Identitas channel, kontak, sesi konsultasi, pesan masuk, pesan keluar, dan status pengiriman disimpan pada tabel terpisah. Isi pesan dan metadata channel memakai encrypted cast Laravel; payload webhook lengkap tidak disimpan.
+
+Menu **Chatbot → Pengguna Chatbot** (`/admin/chatbot-contacts`) menampilkan pengguna terbaru, channel, username/ID, Chat ID, status, serta jumlah aktivitas. Detail identitas ditampilkan melalui modal ringkas. Menu **Chatbot → Percakapan** (`/admin/chatbot-conversations`) menampilkan sesi terbaru dan riwayat pesan untuk admin.
+
+Webhook mendaftarkan update `message` dan `my_chat_member`. Update kedua dipakai untuk menandai pengguna yang memblokir atau mengaktifkan kembali bot. Pasang ulang webhook setelah deployment:
+
+```bash
+php artisan telegram:webhook set
+```
+
+Retensi pesan dan batas pengguna tidak aktif dapat diatur melalui tab **Percakapan** di Pengaturan Bot. Pembersihan berjalan melalui scheduler dan dapat dijalankan manual:
+
+```bash
+php artisan chatbot:purge-history
+php artisan chatbot:purge-history --days=90
+```
+
+Server production perlu menjalankan scheduler Laravel. `APP_KEY` tidak boleh diganti setelah data tersimpan karena dipakai untuk mendekripsi credential, metadata, dan isi pesan.
 
 Untuk deployment di belakang Cloudflare, Traefik, atau reverse proxy lain, gunakan `APP_URL=https://domain-production.example` dan `ASSET_URL=https://domain-production.example`. Aplikasi mempercayai header proxy dan memakai asset root eksplisit agar dynamic import Filament/Livewire selalu menggunakan HTTPS dan tidak terkena mixed content.
 

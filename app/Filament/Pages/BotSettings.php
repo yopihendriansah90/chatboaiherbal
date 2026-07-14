@@ -166,6 +166,29 @@ class BotSettings extends Page
                                             ->minValue(15)
                                             ->maxValue(100),
                                     ]),
+                                Section::make('Penyimpanan riwayat')
+                                    ->description('Atur pencatatan percakapan untuk monitoring internal dan masa penyimpanannya.')
+                                    ->columns(3)
+                                    ->schema([
+                                        Toggle::make('chat_history_enabled')
+                                            ->label('Simpan riwayat chat')
+                                            ->helperText('Jika dimatikan, bot tetap berjalan tetapi pengguna dan pesan baru tidak dicatat.')
+                                            ->columnSpanFull(),
+                                        TextInput::make('chat_history_retention_days')
+                                            ->label('Retensi pesan')
+                                            ->numeric()
+                                            ->suffix('hari')
+                                            ->required()
+                                            ->minValue(1)
+                                            ->maxValue(3650),
+                                        TextInput::make('inactive_contact_days')
+                                            ->label('Pengguna dianggap tidak aktif')
+                                            ->numeric()
+                                            ->suffix('hari')
+                                            ->required()
+                                            ->minValue(1)
+                                            ->maxValue(3650),
+                                    ]),
                             ]),
                         Tab::make('Status')
                             ->icon('heroicon-o-shield-check')
@@ -252,8 +275,9 @@ class BotSettings extends Page
 
     private function setWebhook(): void
     {
-        $url = config('services.telegram.webhook_url');
-        $secret = config('services.telegram.webhook_secret');
+        $configuration = app(BotConfiguration::class);
+        $url = $configuration->telegramWebhookUrl();
+        $secret = $configuration->telegramWebhookSecret();
         if (blank($url) || blank($secret)) {
             Notification::make()->title('Webhook belum lengkap')->body('Simpan Webhook URL dan secret terlebih dahulu.')->danger()->send();
 
@@ -263,7 +287,7 @@ class BotSettings extends Page
         $this->telegramAction('setWebhook', [
             'url' => $url,
             'secret_token' => $secret,
-            'allowed_updates' => ['message'],
+            'allowed_updates' => ['message', 'my_chat_member'],
         ], 'Webhook berhasil dipasang');
     }
 

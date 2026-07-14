@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             AiModelSeeder::class,
             AiModelPriceSeeder::class,
             BotSettingSeeder::class,
+            ChannelIntegrationSeeder::class,
         ]);
     }
 }

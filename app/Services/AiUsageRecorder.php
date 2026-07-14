@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AiProvider;
 use App\Models\AiUsageRecord;
+use App\Services\Chatbot\ChatbotRequestContext;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -11,7 +12,10 @@ use Throwable;
 
 class AiUsageRecorder
 {
-    public function __construct(private AiCostCalculator $costs) {}
+    public function __construct(
+        private AiCostCalculator $costs,
+        private ChatbotRequestContext $context,
+    ) {}
 
     public function recordResponse(
         string $providerName,
@@ -71,7 +75,11 @@ class AiUsageRecorder
 
             $costs = $this->costs->calculate($provider, $providerName, $model, $tokens);
 
-            return AiUsageRecord::query()->create([...$data, ...$costs]);
+            $context = Schema::hasColumn('ai_usage_records', 'chatbot_conversation_id')
+                ? $this->context->usageAttributes()
+                : [];
+
+            return AiUsageRecord::query()->create([...$data, ...$costs, ...$context]);
         } catch (Throwable $exception) {
             Log::warning('AI usage could not be recorded', [
                 'provider' => $providerName,

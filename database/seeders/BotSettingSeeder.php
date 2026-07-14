@@ -43,6 +43,9 @@ class BotSettingSeeder extends Seeder
             'renderer_max_words' => 45,
             'memory_ttl_hours' => 24,
             'history_limit' => 6,
+            'chat_history_enabled' => true,
+            'chat_history_retention_days' => 90,
+            'inactive_contact_days' => 30,
             'is_active' => true,
             'updated_by' => User::query()->where('email', 'admin@mail.com')->value('id'),
         ]);

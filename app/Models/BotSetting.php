@@ -28,6 +28,9 @@ class BotSetting extends Model
         'renderer_max_words',
         'memory_ttl_hours',
         'history_limit',
+        'chat_history_enabled',
+        'chat_history_retention_days',
+        'inactive_contact_days',
         'is_active',
         'updated_by',
     ];
@@ -55,6 +58,9 @@ class BotSetting extends Model
             'renderer_max_words' => 'integer',
             'memory_ttl_hours' => 'integer',
             'history_limit' => 'integer',
+            'chat_history_enabled' => 'boolean',
+            'chat_history_retention_days' => 'integer',
+            'inactive_contact_days' => 'integer',
         ];
     }
 

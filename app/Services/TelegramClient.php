@@ -25,9 +25,9 @@ class TelegramClient
             ->json();
     }
 
-    public function sendMessage(int|string $chatId, string $text): void
+    public function sendMessage(int|string $chatId, string $text): array
     {
-        $this->call('sendMessage', [
+        return $this->call('sendMessage', [
             'chat_id' => $chatId,
             'text' => mb_substr($text, 0, 4096),
             'disable_web_page_preview' => true,
