@@ -92,6 +92,9 @@ class HerbalChatbot
         if ($catalogDetail = $this->catalogProductSelectionReply($chatId, $state, $message)) {
             return $this->remember($chatId, $message, $catalogDetail);
         }
+        if ($ingredientReply = $this->ingredientQuestionReply($chatId, $message)) {
+            return $this->remember($chatId, $message, $ingredientReply);
+        }
         if ($this->isIdentityQuestion($message)) {
             return $this->remember($chatId, $message, self::ASSISTANT_IDENTITY);
         }
@@ -900,6 +903,107 @@ class HerbalChatbot
         }
 
         return implode(self::MESSAGE_BREAK, $messages);
+    }
+
+    private function ingredientQuestionReply(int|string $chatId, string $message): ?string
+    {
+        $query = $this->extractIngredientQuery($message);
+        if ($query === null) {
+            return null;
+        }
+
+        $result = $this->products->findByIngredient($query);
+        if ($result['matches'] === []) {
+            return "Kalau kakak sedang mencari produk berbahan {$query}, saat ini aku belum menemukannya pada komposisi produk aktif di katalog Walatra. Aku tidak mau memilihkan produk lain secara asal. Boleh ceritakan manfaat atau kebutuhan yang kakak cari? Nanti aku bantu cek pilihan yang paling relevan 😊";
+        }
+
+        $matches = array_slice($result['matches'], 0, 6);
+        $productLines = array_map(
+            fn (array $match, int $index): string => ($index + 1).'. '.$match['product']['nama_produk'].' — '.($match['product']['bentuk_sediaan'] ?: 'Produk herbal'),
+            $matches,
+            array_keys($matches),
+        );
+        $narratives = array_values(array_unique(array_filter(array_merge(...array_map(
+            fn (array $match): array => array_column($match['ingredients'], 'narasi_membantu_penyembuhan_herbal'),
+            $matches,
+        )))));
+        $ingredientName = $matches[0]['ingredients'][0]['nama_bahan'] ?? $query;
+        $education = $narratives !== []
+            ? "\n\nTentang bahannya:\n".implode(' ', array_slice($narratives, 0, 2))
+            : '';
+
+        $state = $this->store->get($chatId);
+        $state['catalog_context'] = [
+            'product_codes' => array_column(array_column($matches, 'product'), 'kode'),
+            'selected_product_code' => null,
+        ];
+        $this->store->put($chatId, $state);
+
+        return "Ada kak 😊 Berikut produk yang komposisinya mencantumkan {$ingredientName}:\n\n"
+            .implode("\n", $productLines)
+            .$education
+            ."\n\nKakak bisa sebut nomor atau nama produknya kalau ingin aku jelaskan detail, aturan pakai, dan legalitasnya.";
+    }
+
+    private function extractIngredientQuery(string $message): ?string
+    {
+        $normalized = $this->normalizeSocialText($message);
+        $explicitPatterns = [
+            '/^(?:ada|punya|cari|carikan|mana)\s+(?:produk\s+)?(?:yang\s+)?(?:mengandung|berbahan|pakai|ada\s+kandungan)\s+(.+)$/u',
+            '/^(?:produk|obat\s+herbal|herbal)\s+(?:yang\s+)?(?:dengan\s+kandungan|berbahan|mengandung)\s+(.+)$/u',
+            '/^(?:yang\s+)?(?:mengandung|berbahan)\s+(.+)$/u',
+            '/^(?:komposisi|kandungan|bahan)\s+(.+)$/u',
+            '/^(.+?)\s+(?:ada|tersedia)\s+(?:ga|gak|nggak|tidak|kah)?$/u',
+        ];
+        foreach ($explicitPatterns as $pattern) {
+            if (preg_match($pattern, $normalized, $matches)) {
+                return $this->cleanIngredientQuery($matches[1]);
+            }
+        }
+
+        if (preg_match('/^(?:ada\s+)?(?:produk|herbal)\s+(.+)$/u', $normalized, $matches)) {
+            $candidate = $this->cleanIngredientQuery($matches[1]);
+            if ($this->isKnownIngredientTerm($candidate)) {
+                return $candidate;
+            }
+        }
+
+        if ($this->isKnownIngredientTerm($normalized)) {
+            return $normalized === 'gingseng' ? 'ginseng' : $normalized;
+        }
+
+        return null;
+    }
+
+    private function isKnownIngredientTerm(string $term): bool
+    {
+        $common = [
+            'ginseng', 'gingseng', 'jahe', 'jahe merah', 'kunyit', 'kunyit putih', 'temulawak',
+            'pegagan', 'saffron', 'propolis', 'madu', 'pasak bumi', 'daun kelor', 'daun sirsak',
+            'kulit manggis', 'bawang hitam', 'teripang', 'ikan gabus', 'albumin', 'susu kambing',
+            'manjakani', 'daun sirih', 'kayu manis', 'likopen', 'squalene', 'binahong',
+        ];
+        if (in_array($term, $common, true)) {
+            return true;
+        }
+
+        foreach ($this->products->ingredientNames() as $ingredientName) {
+            $candidate = $this->cleanIngredientQuery($ingredientName);
+            if ($candidate !== '' && ($term === $candidate || str_contains(' '.$candidate.' ', ' '.$term.' '))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function cleanIngredientQuery(string $query): string
+    {
+        $query = trim($query);
+        $query = preg_replace('/(?:\s+(?:ga|gak|nggak|ngga|tidak|kah))?(?:\s+(?:dong|ya|kak|min|admin|nih|sih))*$/u', '', $query) ?? $query;
+        $query = preg_replace('/^(?:ekstrak|bubuk|serbuk)\s+/u', '', $query) ?? $query;
+
+        return trim($query);
     }
 
     private function catalogProductSelectionReply(int|string $chatId, array $state, string $message): ?string

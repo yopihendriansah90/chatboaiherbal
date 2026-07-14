@@ -69,6 +69,72 @@ class ProductRepository
         return array_column($this->relevantProducts($query, $limit), 'kode');
     }
 
+    /**
+     * Find products from an ingredient name without symptom similarity or
+     * wellness fallbacks. This is intentionally deterministic so an ingredient
+     * question can never be replaced with an unrelated product.
+     *
+     * @return array{query:string,matches:list<array{product:array,ingredients:list<array>} >}
+     */
+    public function findByIngredient(string $query): array
+    {
+        $needle = $this->normalizeIngredient($query);
+        $matches = [];
+
+        if ($needle === '') {
+            return ['query' => $needle, 'matches' => []];
+        }
+
+        foreach ($this->all() as $product) {
+            $ingredients = array_values(array_filter(
+                $product['komposisi'] ?? [],
+                function (array $ingredient) use ($needle): bool {
+                    $identity = $this->normalizeIngredient(implode(' ', array_filter([
+                        $ingredient['nama_bahan'] ?? null,
+                        $ingredient['kandungan_utama'] ?? null,
+                    ])));
+
+                    return $this->ingredientMatches($needle, $identity);
+                },
+            ));
+
+            if ($ingredients !== []) {
+                $matches[] = ['product' => $product, 'ingredients' => $ingredients];
+            }
+        }
+
+        return ['query' => $needle, 'matches' => $matches];
+    }
+
+    /** @return list<string> */
+    public function ingredientNames(): array
+    {
+        return array_values(array_unique(array_filter(array_merge(...array_map(
+            fn (array $product): array => array_column($product['komposisi'] ?? [], 'nama_bahan'),
+            $this->all(),
+        )))));
+    }
+
+    private function ingredientMatches(string $needle, string $ingredient): bool
+    {
+        if ($ingredient === '' || $needle === '') {
+            return false;
+        }
+
+        return $needle === $ingredient
+            || str_contains(' '.$ingredient.' ', ' '.$needle.' ')
+            || str_contains(' '.$needle.' ', ' '.$ingredient.' ');
+    }
+
+    private function normalizeIngredient(string $value): string
+    {
+        $value = mb_strtolower($value);
+        $value = preg_replace('/[^\pL\pN]+/u', ' ', $value) ?? $value;
+        $value = preg_replace('/^(?:ekstrak|bubuk|serbuk)\s+/u', '', trim($value)) ?? $value;
+
+        return trim(preg_replace('/\s+/u', ' ', $value) ?? $value);
+    }
+
     private function relevantProducts(?string $query, int $limit): array
     {
         if (! is_string($query) || trim($query) === '') {

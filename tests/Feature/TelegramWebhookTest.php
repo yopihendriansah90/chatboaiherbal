@@ -122,6 +122,31 @@ class TelegramWebhookTest extends TestCase
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
     }
 
+    public function test_ingredient_mentions_use_catalog_composition_without_unrelated_fallback(): void
+    {
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true]), '*' => Http::response([], 500)]);
+
+        $this->send(315, 'ada produk ginseng ga kak?')->assertOk();
+        $this->assertTelegramTextContains('belum menemukannya pada komposisi produk aktif');
+        $this->assertTelegramTextContains('tidak mau memilihkan produk lain secara asal');
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'sendMessage')
+            && str_contains((string) $request['text'], 'Propolis SM Brazil'));
+
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true]), '*' => Http::response([], 500)]);
+
+        $this->send(316, 'temulawak')->assertOk();
+        $this->assertTelegramTextContains('produk yang komposisinya mencantumkan Temulawak');
+        $this->assertTelegramTextContains('Goldmax Gamat Emas');
+        $this->assertTelegramTextContains('Hexabumin');
+
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true]), '*' => Http::response([], 500)]);
+
+        $this->send(317, 'produk yang mengandung pasak bumi')->assertOk();
+        $this->assertTelegramTextContains('Kopi Radimax');
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
     public function test_casual_consultation_openers_are_understood_without_ai(): void
     {
         Http::fake(['api.telegram.org/*' => Http::response(['ok' => true]), '*' => Http::response([], 500)]);

@@ -34,6 +34,20 @@ class ProductRepositoryTest extends TestCase
         $this->assertSame(['ALB', 'PRP'], array_column($products, 'kode'));
     }
 
+    public function test_ingredient_search_never_uses_wellness_fallback(): void
+    {
+        $repository = app(ProductRepository::class);
+
+        $this->assertSame([], $repository->findByIngredient('ginseng')['matches']);
+
+        $matches = $repository->findByIngredient('temulawak')['matches'];
+        $codes = array_column(array_column($matches, 'product'), 'kode');
+
+        $this->assertContains('GME', $codes);
+        $this->assertContains('HEX', $codes);
+        $this->assertNotContains('PRP', $codes);
+    }
+
     public function test_prompt_catalog_is_limited_to_relevant_products(): void
     {
         $catalog = json_decode(app(ProductRepository::class)->catalogForPrompt('anak batuk', 4), true);
