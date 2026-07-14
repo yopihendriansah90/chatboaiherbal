@@ -14,18 +14,38 @@ class ProductRuleEngine
 
     public function recommend(string $category, array $facts): ?array
     {
+        return $this->alternatives($category, $facts, limit: 1)[0] ?? null;
+    }
+
+    /** @return list<array<string, mixed>> */
+    public function alternatives(
+        string $category,
+        array $facts,
+        array $excludeCodes = [],
+        ?string $dosageForm = null,
+        int $limit = 1,
+    ): array {
         $codes = $this->codesFor($category, $facts);
+        $excluded = array_map('strtoupper', $excludeCodes);
+        $matches = [];
 
         foreach ($this->products->findMany($codes, count($codes)) as $product) {
+            if (in_array(strtoupper((string) $product['kode']), $excluded, true)) {
+                continue;
+            }
             if (($product['_stock']['tracked'] ?? false) === true && ($product['_stock']['available'] ?? 0) < 1) {
                 continue;
             }
-            if (! $this->isContraindicated($product, $facts)) {
-                return $product;
+            if ($this->isContraindicated($product, $facts) || ! $this->matchesDosageForm($product, $dosageForm)) {
+                continue;
+            }
+            $matches[] = $product;
+            if (count($matches) >= max(1, $limit)) {
+                break;
             }
         }
 
-        return null;
+        return $matches;
     }
 
     public function label(string $category): string
@@ -46,9 +66,13 @@ class ProductRuleEngine
 
     private function codesFor(string $category, array $facts): array
     {
+        $age = (int) filter_var((string) ($facts['age_group'] ?? ''), FILTER_SANITIZE_NUMBER_INT);
+        if ($category === 'male_vitality' && $age > 0 && $age < 18) {
+            return [];
+        }
+
         try {
             if (Schema::hasTable('product_recommendation_rules')) {
-                $age = (int) filter_var((string) ($facts['age_group'] ?? ''), FILTER_SANITIZE_NUMBER_INT);
                 $subjectType = ($facts['subject'] ?? null) === 'anak' ? 'child' : ($age >= 60 ? 'senior' : 'adult');
                 $codes = ProductRecommendationRule::query()
                     ->where('is_active', true)
@@ -153,5 +177,25 @@ class ProductRuleEngine
         }
 
         return false;
+    }
+
+    private function matchesDosageForm(array $product, ?string $preference): bool
+    {
+        if ($preference === null || $preference === '') {
+            return true;
+        }
+
+        $form = mb_strtolower(trim((string) ($product['bentuk_sediaan'] ?? '')));
+
+        return match ($preference) {
+            'capsule' => str_contains($form, 'kapsul'),
+            'softgel' => str_contains($form, 'softgel'),
+            'syrup' => str_contains($form, 'sirup'),
+            'powder' => str_contains($form, 'serbuk'),
+            'drink' => (bool) preg_match('/\b(?:serbuk|minuman|sari)\b/u', $form),
+            'liquid' => (bool) preg_match('/\b(?:cair|tetes|jelly|sari|minyak)\b/u', $form),
+            'topical' => (bool) preg_match('/\b(?:oles|sabun)\b/u', $form),
+            default => str_contains($form, mb_strtolower($preference)),
+        };
     }
 }

@@ -27,7 +27,7 @@ class HealthEndpointTest extends TestCase
             ->assertOk()
             ->assertJsonPath('status', 'ok')
             ->assertJsonPath('checks.cache', 'ok')
-            ->assertJsonPath('checks.product_catalog.products', 18)
+            ->assertJsonPath('checks.product_catalog.products', 24)
             ->assertJsonPath('checks.telegram.configured', true)
             ->assertJsonPath('checks.ai_parser.configured', true)
             ->assertJsonPath('checks.natural_renderer.enabled', true);

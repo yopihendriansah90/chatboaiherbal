@@ -15,7 +15,12 @@ use RuntimeException;
 class HerbalCatalogImporter
 {
     /** @return array{products:int,ingredients:int,categories:int} */
-    public function import(?string $path = null, bool $dryRun = false, bool $updateExisting = false): array
+    public function import(
+        ?string $path = null,
+        bool $dryRun = false,
+        bool $updateExisting = false,
+        bool $replaceExisting = false,
+    ): array
     {
         $path ??= (string) config('chatbot.catalog_path');
         if (! is_readable($path)) {
@@ -34,7 +39,13 @@ class HerbalCatalogImporter
             return $result;
         }
 
-        DB::transaction(function () use ($catalog, $business, $updateExisting): void {
+        DB::transaction(function () use ($catalog, $business, $updateExisting, $replaceExisting): void {
+            if ($replaceExisting) {
+                Product::query()->delete();
+                ProductCategory::query()->whereNotIn('code', array_keys((array) config('herbal_rules.labels')))->delete();
+                Ingredient::query()->whereDoesntHave('products')->delete();
+            }
+
             $categories = [];
             foreach ((array) config('herbal_rules.labels') as $code => $label) {
                 $categories[$code] = ProductCategory::query()->updateOrCreate(
@@ -54,8 +65,16 @@ class HerbalCatalogImporter
                         'name' => $source['nama_produk'],
                         'slug' => Str::slug($source['nama_produk'].'-'.$code),
                         'short_description' => $this->firstNarrative($source),
-                        'full_description' => $this->firstNarrative($source),
+                        'full_description' => $source['deskripsi'] ?? $this->firstNarrative($source),
+                        'package_content' => $source['isi'] ?? null,
+                        'dosage_form' => $source['bentuk_sediaan'] ?? null,
+                        'usage_instruction' => $source['aturan_pakai'] ?? null,
+                        'manufacturer' => $source['produsen'] ?? null,
+                        'registration_number' => $source['nomor_registrasi'] ?? null,
+                        'halal_status' => $source['status_halal'] ?? null,
                         'additional_notes' => $source['catatan_tambahan'] ?: null,
+                        'source_document' => $catalog['metadata']['sumber_file'] ?? null,
+                        'source_page' => $source['halaman_sumber'] ?? null,
                         'status' => 'active',
                         'is_active' => true,
                         'source_checksum' => hash('sha256', json_encode($source, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)),
@@ -64,14 +83,16 @@ class HerbalCatalogImporter
                     continue;
                 }
 
-                $product->links()->updateOrCreate(
-                    ['channel' => 'marketplace', 'is_primary' => true],
-                    ['label' => 'Link produk', 'url' => $source['link_produk'], 'is_active' => true],
-                );
+                if (filled($source['link_produk'] ?? null)) {
+                    $product->links()->updateOrCreate(
+                        ['channel' => 'marketplace', 'is_primary' => true],
+                        ['label' => 'Link produk', 'url' => $source['link_produk'], 'is_active' => true],
+                    );
+                }
                 $product->inventory()->firstOrCreate([], ['available_quantity' => 0, 'reserved_quantity' => 0, 'track_stock' => false]);
 
                 $product->ingredients()->detach();
-                $product->claims()->where('source', 'catalog_json')->delete();
+                $product->claims()->delete();
                 foreach ($source['komposisi'] ?? [] as $ingredientSource) {
                     $name = trim((string) $ingredientSource['nama_bahan']);
                     $ingredient = Ingredient::query()->updateOrCreate(
@@ -96,7 +117,33 @@ class HerbalCatalogImporter
                     }
                 }
 
+                foreach ($source['manfaat_sumber'] ?? [] as $claim) {
+                    $product->claims()->create([
+                        'type' => 'source_catalog_claim',
+                        'claim_text' => $claim,
+                        'source' => 'catalog_pdf',
+                        'version' => (string) ($catalog['metadata']['versi'] ?? '2021'),
+                        'approval_status' => 'reference_only',
+                        'is_active' => false,
+                    ]);
+                }
+                foreach (['benefit' => 'manfaat_disetujui', 'mechanism' => 'cara_kerja_disetujui', 'soft_selling' => 'narasi_soft_selling'] as $type => $field) {
+                    if (! filled($source[$field] ?? null)) {
+                        continue;
+                    }
+                    $product->claims()->create([
+                        'type' => $type,
+                        'claim_text' => $source[$field],
+                        'source' => 'catalog_curated',
+                        'version' => (string) ($catalog['metadata']['versi'] ?? '2021'),
+                        'approval_status' => 'approved',
+                        'is_active' => true,
+                    ]);
+                }
+
                 $this->syncContraindications($product, $source);
+
+                $product->categories()->sync([]);
 
                 foreach ((array) config('herbal_rules.categories') as $categoryCode => $codes) {
                     $position = array_search($code, array_values($codes), true);
@@ -109,7 +156,14 @@ class HerbalCatalogImporter
                     ]);
                     ProductRecommendationRule::query()->updateOrCreate(
                         ['product_category_id' => $category->id, 'product_id' => $product->id],
-                        ['priority' => ($position + 1) * 10, 'is_fallback' => $categoryCode === 'unsupported_health', 'is_active' => true],
+                        [
+                            'priority' => ($position + 1) * 10,
+                            'minimum_age' => $source['minimum_age'] ?? null,
+                            'maximum_age' => $source['maximum_age'] ?? null,
+                            'subject_type' => $source['subject_type'] ?? null,
+                            'is_fallback' => $categoryCode === 'unsupported_health',
+                            'is_active' => true,
+                        ],
                     );
                 }
             }
@@ -120,25 +174,30 @@ class HerbalCatalogImporter
 
     private function validateProduct(array $product): void
     {
-        foreach (['kode', 'nama_produk', 'link_produk', 'komposisi'] as $field) {
+        foreach (['kode', 'nama_produk', 'link_produk', 'komposisi', 'manfaat_disetujui', 'cara_kerja_disetujui'] as $field) {
             if (! array_key_exists($field, $product)) {
                 throw new RuntimeException("Produk tidak memiliki field {$field}.");
             }
         }
-        if (! filter_var($product['link_produk'], FILTER_VALIDATE_URL)) {
+        if (filled($product['link_produk']) && ! filter_var($product['link_produk'], FILTER_VALIDATE_URL)) {
             throw new RuntimeException("URL produk {$product['kode']} tidak valid.");
         }
     }
 
     private function firstNarrative(array $product): ?string
     {
-        return collect($product['komposisi'] ?? [])->pluck('narasi_membantu_penyembuhan_herbal')->filter()->first();
+        return $product['manfaat_disetujui']
+            ?? collect($product['komposisi'] ?? [])->pluck('narasi_membantu_penyembuhan_herbal')->filter()->first();
     }
 
     private function syncContraindications(Product $product, array $source): void
     {
         $warnings = mb_strtolower(implode(' ', array_filter(array_merge(
             [$source['catatan_tambahan'] ?? null],
+            array_map(fn (array $item): string => implode(' ', array_filter([
+                $item['label'] ?? null,
+                $item['guidance'] ?? null,
+            ])), $source['pantangan'] ?? []),
             array_column($source['komposisi'] ?? [], 'pantangan_dan_aturan_konsumsi'),
         ))));
         $rules = [
@@ -157,7 +216,23 @@ class HerbalCatalogImporter
         ];
 
         $product->contraindications()->delete();
+        foreach ($source['pantangan'] ?? [] as $item) {
+            ProductContraindication::query()->create([
+                'product_id' => $product->id,
+                'type' => $item['type'],
+                'code' => $item['code'],
+                'label' => $item['label'],
+                'severity' => $item['severity'] ?? 'caution',
+                'guidance' => $item['guidance'] ?? null,
+                'is_active' => true,
+            ]);
+        }
+
+        $existingCodes = collect($source['pantangan'] ?? [])->pluck('code')->all();
         foreach ($rules as [$type, $code, $label, $needles]) {
+            if (in_array($code, $existingCodes, true)) {
+                continue;
+            }
             if (! collect($needles)->contains(fn (string $needle): bool => str_contains($warnings, $needle))) {
                 continue;
             }

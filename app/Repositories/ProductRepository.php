@@ -10,7 +10,7 @@ use Throwable;
 
 class ProductRepository
 {
-    private const WELLNESS_FALLBACK_CODES = ['OIL', 'KLRN', 'CHS', 'SQU'];
+    private const WELLNESS_FALLBACK_CODES = ['KLR', 'PRP', 'SQU', 'SAF'];
 
     private ?array $data = null;
 
@@ -85,6 +85,8 @@ class ProductRepository
             'rematik' => ['sendi', 'nyeri sendi'],
             'maag' => ['lambung', 'gerd'],
             'sesak' => ['napas', 'pernapasan'],
+            'batuk' => ['tenggorokan', 'pernapasan'],
+            'insomnia' => ['tidur', 'relaksasi'],
         ];
         $requiredTerms = [];
         if (array_intersect($tokens, ['lutut', 'rematik']) !== []) {
@@ -169,7 +171,7 @@ class ProductRepository
                     throw new RuntimeException("Produk tidak memiliki field {$key}.");
                 }
             }
-            if (isset($codes[$product['kode']]) || ! filter_var($product['link_produk'], FILTER_VALIDATE_URL)) {
+            if (isset($codes[$product['kode']]) || (filled($product['link_produk']) && ! filter_var($product['link_produk'], FILTER_VALIDATE_URL))) {
                 throw new RuntimeException('Kode produk duplikat atau URL produk tidak valid.');
             }
             $codes[$product['kode']] = true;
@@ -207,6 +209,13 @@ class ProductRepository
                         'nama_produk' => $product->name,
                         'link_produk' => $link?->url ?? '',
                         'catatan_tambahan' => $product->additional_notes ?? '',
+                        'deskripsi' => $product->full_description ?? '',
+                        'isi' => $product->package_content ?? '',
+                        'bentuk_sediaan' => $product->dosage_form ?? '',
+                        'aturan_pakai' => $product->usage_instruction ?? '',
+                        'produsen' => $product->manufacturer ?? '',
+                        'nomor_registrasi' => $product->registration_number ?? '',
+                        'status_halal' => $product->halal_status ?? '',
                         'komposisi' => $product->ingredients->map(fn ($ingredient): array => [
                             'nama_bahan' => $ingredient->name,
                             'kandungan_utama' => $ingredient->pivot->main_content ?? '',

@@ -25,7 +25,7 @@ class ConversationStore
 
     public function fresh(): array
     {
-        $healthFacts = ['subject' => null, 'sex' => null, 'complaint' => null, 'category' => null, 'age_group' => null, 'pregnancy' => null, 'allergies' => null, 'conditions' => null, 'medications' => null, 'duration' => null, 'red_flags' => null, 'product_requested' => false];
+        $healthFacts = ['subject' => null, 'sex' => null, 'complaint' => null, 'category' => null, 'age_group' => null, 'pregnancy' => null, 'allergies' => null, 'conditions' => null, 'medications' => null, 'duration' => null, 'frequency' => null, 'red_flags' => null, 'sexual_issue' => null, 'sexual_clarification' => false, 'product_requested' => false];
 
         return [
             'active_domain' => null,
@@ -37,7 +37,10 @@ class ConversationStore
             ],
             'history' => [],
             'offered_products' => [],
+            'product_preferences' => ['dosage_form' => null],
+            'catalog_context' => ['product_codes' => [], 'selected_product_code' => null],
             'missing_fields' => [],
+            'crisis' => null,
         ];
     }
 

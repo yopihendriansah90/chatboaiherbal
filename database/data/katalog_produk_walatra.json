@@ -1,0 +1,291 @@
+{
+  "metadata": {
+    "nama_dataset": "Katalog Produk Walatra dari Katalog Produk Aceh Herbal",
+    "sumber_file": "Katalog Produk Walatra.pdf",
+    "versi": "2021-11",
+    "jumlah_produk": 24,
+    "format": "katalog_produk_terstruktur_v2",
+    "catatan_penggunaan": "Pernyataan kegunaan pada PDF disimpan sebagai referensi sumber. Chatbot hanya memakai manfaat dan cara kerja yang telah dinarasikan ulang secara suportif, tanpa diagnosis atau janji kesembuhan.",
+    "link_produk": "Belum diisi; dikelola manual melalui panel admin."
+  },
+  "produk": [
+    {
+      "kode": "SMC", "nama_produk": "Sarmucare", "halaman_sumber": 2,
+      "deskripsi": "Produk herbal berbahan ekstrak sarang semut dalam bentuk kapsul.",
+      "isi": "100 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "2 kali sehari, masing-masing 2 kapsul setelah makan.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 193325781", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Ekstrak sarang semut","kandungan_utama":"100% ekstrak sarang semut asli","gejala_penyakit":"Dukungan kebugaran dan antioksidan","narasi_membantu_penyembuhan_herbal":"Ekstrak sarang semut digunakan sebagai sumber senyawa alami untuk mendukung perlindungan sel dan kebugaran tubuh.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai pada label. Kondisi kronis atau terapi medis tetap memerlukan pengawasan tenaga kesehatan."}],
+      "manfaat_sumber": ["Membantu proses penyembuhan tumor dan kanker", "Menstabilkan detak jantung", "Membantu perawatan stroke ringan", "Membantu mengoptimalkan ginjal", "Meredakan gangguan ginjal", "Bagus untuk tulang dan membantu menghindari osteoporosis", "Membantu mengatasi TBC"],
+      "manfaat_disetujui": "mendukung kebutuhan antioksidan dan kebugaran tubuh", "cara_kerja_disetujui": "Ekstrak sarang semut menyediakan senyawa alami yang membantu mendukung perlindungan sel dari radikal bebas.",
+      "narasi_soft_selling": "Sarmucare dapat dipertimbangkan sebagai herbal pendamping untuk mendukung antioksidan dan kebugaran tubuh. Untuk keluhan serius atau penyakit kronis, penggunaannya perlu dibicarakan dengan tenaga kesehatan.",
+      "catatan_tambahan": "Klaim penyakit serius pada katalog sumber tidak digunakan chatbot sebagai janji kesembuhan.", "pantangan": []
+    },
+    {
+      "kode": "GME", "nama_produk": "Goldmax Gamat Emas", "halaman_sumber": 2,
+      "deskripsi": "Kapsul berbahan teripang emas dengan temulawak dan komponen nutrisi alami.",
+      "isi": "100 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "3 kali sehari, masing-masing 2 kapsul setelah makan.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 193324821", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Ekstrak teripang emas","kandungan_utama":"Golden Stichopus hermanii, glikosida triterpen, GAGs, chondroitin sulfate, sterol, polisakarida, peptide, asam lemak esensial, glycoprotein dan lektin","gejala_penyakit":"Kenyamanan sendi, jaringan dan pemulihan tubuh","narasi_membantu_penyembuhan_herbal":"Komponen alami teripang memberi dukungan nutrisi untuk pemeliharaan jaringan dan kenyamanan sendi.","pantangan_dan_aturan_konsumsi":"Hindari bila memiliki alergi teripang atau seafood."},
+        {"nama_bahan":"Temulawak","kandungan_utama":"Curcuma xanthorrhiza","gejala_penyakit":"Nafsu makan dan pencernaan","narasi_membantu_penyembuhan_herbal":"Temulawak membantu mendukung nafsu makan dan kenyamanan pencernaan.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai pada label."}
+      ],
+      "manfaat_sumber": ["Meningkatkan nafsu makan", "Mengobati penyakit degeneratif secara alami", "Memelihara kesehatan tulang", "Membantu mengobati penyakit pada paru-paru, jantung, lambung, ginjal, hati, dan organ tubuh lainnya", "Membantu mengobati penyakit kronis dan nonkronis secara alami"],
+      "manfaat_disetujui": "kenyamanan sendi, pemeliharaan jaringan, dan pemulihan tubuh", "cara_kerja_disetujui": "Kandungan protein, kolagen, GAGs, dan komponen alami teripang membantu mendukung pemeliharaan jaringan, sedangkan temulawak mendukung kenyamanan pencernaan.",
+      "narasi_soft_selling": "Goldmax Gamat Emas dapat dipertimbangkan sebagai pendamping untuk membantu pemeliharaan jaringan dan kenyamanan sendi.",
+      "catatan_tambahan": "Bukan pengganti penanganan medis untuk penyakit kronis.",
+      "pantangan": [{"type":"allergy","code":"fish_seafood","label":"Alergi ikan, teripang, atau seafood","severity":"avoid","guidance":"Hindari bila memiliki alergi ikan, teripang, atau seafood."}]
+    },
+    {
+      "kode": "ETK", "nama_produk": "Etaku Goat Milk", "halaman_sumber": 3,
+      "deskripsi": "Minuman serbuk susu kambing dengan albumin, kedelai, dan pegagan.",
+      "isi": "10 sachet, 25 gram per sachet", "bentuk_sediaan": "Serbuk minuman", "aturan_pakai": "Campurkan satu sachet dengan sekitar 400 ml air hingga larut, lalu konsumsi sesuai kebutuhan dan petunjuk label.",
+      "produsen": null, "nomor_registrasi": "BPOM TR 173204301", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Susu kambing","kandungan_utama":"50%","gejala_penyakit":"Kebutuhan protein dan kalsium","narasi_membantu_penyembuhan_herbal":"Susu kambing menyediakan protein dan mineral untuk mendukung pemenuhan nutrisi harian.","pantangan_dan_aturan_konsumsi":"Hindari bila alergi susu; perhatikan toleransi laktosa."},
+        {"nama_bahan":"Albumin","kandungan_utama":"20%","gejala_penyakit":"Pemulihan dan kebutuhan protein","narasi_membantu_penyembuhan_herbal":"Albumin membantu melengkapi kebutuhan protein tubuh.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."},
+        {"nama_bahan":"Kedelai","kandungan_utama":"29%","gejala_penyakit":"Nutrisi harian","narasi_membantu_penyembuhan_herbal":"Kedelai memberi tambahan protein nabati.","pantangan_dan_aturan_konsumsi":"Hindari bila alergi kedelai."},
+        {"nama_bahan":"Pegagan","kandungan_utama":"1%","gejala_penyakit":"Kebugaran umum","narasi_membantu_penyembuhan_herbal":"Pegagan melengkapi komposisi herbal untuk mendukung kebugaran.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."}
+      ],
+      "manfaat_sumber": ["Menjaga kesehatan tulang dan gigi", "Mencegah osteoporosis", "Membantu mengobati anemia", "Mencegah diabetes", "Baik untuk sistem pencernaan", "Meningkatkan produksi ASI", "Baik untuk kesehatan ibu hamil", "Meningkatkan kekebalan tubuh", "Menurunkan kolesterol tinggi", "Sebagai kalsium peninggi badan"],
+      "manfaat_disetujui": "pemenuhan protein, kalsium, dan nutrisi harian", "cara_kerja_disetujui": "Susu kambing, albumin, dan kedelai menyediakan protein serta mineral untuk mendukung kebutuhan nutrisi dan pemeliharaan tulang.",
+      "narasi_soft_selling": "Etaku Goat Milk dapat dipertimbangkan untuk membantu melengkapi protein dan kalsium harian.", "catatan_tambahan": "Tidak menjamin penambahan tinggi badan atau penyembuhan penyakit.",
+      "pantangan": [{"type":"allergy","code":"milk_lactose","label":"Alergi susu atau intoleransi laktosa","severity":"avoid","guidance":"Hindari bila alergi susu; pengguna dengan intoleransi laktosa perlu berhati-hati."},{"type":"allergy","code":"soy","label":"Alergi kedelai","severity":"avoid","guidance":"Hindari bila alergi kedelai."}]
+    },
+    {
+      "kode": "KLR", "nama_produk": "Keloreena", "halaman_sumber": 3,
+      "deskripsi": "Kapsul ekstrak daun kelor.", "isi": "Pilihan 50 kapsul atau 100 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "2 kali sehari, masing-masing 2 kapsul setelah makan.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 193332021", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Ekstrak daun kelor","kandungan_utama":"100% ekstrak daun kelor asli","gejala_penyakit":"Nutrisi, pencernaan, dan kebugaran","narasi_membantu_penyembuhan_herbal":"Daun kelor mengandung nutrisi dan senyawa antioksidan yang membantu mendukung kebugaran serta pemenuhan nutrisi.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai pada label."}],
+      "manfaat_sumber": ["Menjaga berat badan", "Bermanfaat untuk mata", "Sebagai antipenuaan", "Menyehatkan pencernaan", "Mengurangi peradangan", "Menyehatkan tulang", "Mengobati asma", "Mencegah gangguan ginjal", "Membantu masalah edema", "Meningkatkan libido"],
+      "manfaat_disetujui": "pemenuhan nutrisi, antioksidan, dan kebugaran tubuh", "cara_kerja_disetujui": "Daun kelor menyediakan vitamin, mineral, dan senyawa antioksidan yang membantu melengkapi kebutuhan nutrisi harian.",
+      "narasi_soft_selling": "Keloreena dapat dipertimbangkan sebagai pendamping untuk membantu melengkapi nutrisi dan menjaga kebugaran.", "catatan_tambahan": "Gunakan sesuai petunjuk label.", "pantangan": []
+    },
+    {
+      "kode": "PEG", "nama_produk": "Ekstrak Pegagan", "halaman_sumber": 4,
+      "deskripsi": "Kapsul ekstrak pegagan untuk mendukung fungsi kognitif dan kebugaran.", "isi": "100 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "2 kali sehari, masing-masing 2 kapsul setelah makan.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 163392961", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Ekstrak pegagan","kandungan_utama":"100% ekstrak pegagan (antanan)","gejala_penyakit":"Daya ingat, konsentrasi, dan kebugaran","narasi_membantu_penyembuhan_herbal":"Pegagan secara tradisional digunakan untuk mendukung fungsi kognitif, konsentrasi, dan sirkulasi.","pantangan_dan_aturan_konsumsi":"Keluhan saraf, depresi, atau epilepsi memerlukan penanganan tenaga kesehatan; jangan mengganti obat rutin."}],
+      "manfaat_sumber": ["Meningkatkan daya ingat", "Meningkatkan kecerdasan otak", "Memenuhi nutrisi otak", "Mengatasi stres dan depresi", "Mengurangi pikun dan lupa", "Menjaga kesehatan otak", "Melancarkan peredaran darah pada otak", "Memperbaiki sel saraf", "Sebagai tonik otak dan penambah energi", "Mengatasi ayan atau epilepsi"],
+      "manfaat_disetujui": "daya ingat, konsentrasi, dan kebugaran kognitif", "cara_kerja_disetujui": "Senyawa alami pegagan membantu mendukung sirkulasi dan fungsi kognitif sebagai bagian dari pola hidup sehat.",
+      "narasi_soft_selling": "Ekstrak Pegagan dapat dipertimbangkan untuk membantu mendukung konsentrasi dan kebugaran kognitif.", "catatan_tambahan": "Tidak digunakan untuk menggantikan terapi depresi, epilepsi, atau gangguan saraf.", "pantangan": []
+    },
+    {
+      "kode": "SML", "nama_produk": "Samulinpro Sehat Sendi", "halaman_sumber": 4,
+      "deskripsi": "Kapsul herbal untuk membantu mendukung kenyamanan sendi, otot, dan tulang.", "isi": "100 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "3 kali sehari, masing-masing 2 kapsul setelah makan.",
+      "produsen": "CV. Jogja Natural Herbal", "nomor_registrasi": "BPOM TR 173306941", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Akar kuning","kandungan_utama":"Akar kuning","gejala_penyakit":"Kenyamanan sendi","narasi_membantu_penyembuhan_herbal":"Akar kuning melengkapi formula herbal untuk mendukung kenyamanan tubuh.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."},
+        {"nama_bahan":"Bratawali","kandungan_utama":"Bratawali","gejala_penyakit":"Kenyamanan sendi dan otot","narasi_membantu_penyembuhan_herbal":"Bratawali secara tradisional digunakan untuk mendukung kenyamanan sendi dan otot.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."},
+        {"nama_bahan":"Daun salam","kandungan_utama":"Daun salam","gejala_penyakit":"Kebugaran metabolik","narasi_membantu_penyembuhan_herbal":"Daun salam melengkapi komposisi untuk mendukung kebugaran.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."}
+      ],
+      "manfaat_sumber": ["Membantu kebutuhan kalsium dan pertumbuhan tulang", "Memperbaiki kerusakan tulang rawan pada lutut", "Meredakan sakit, nyeri, panas, dan kemerahan pada sendi", "Mengatasi peradangan akibat asam urat", "Membantu kerusakan tulang dan patah tulang", "Membantu dislokasi sendi berulang", "Mencegah dan mengatasi infeksi sendi"],
+      "manfaat_disetujui": "kenyamanan sendi, otot, dan tulang", "cara_kerja_disetujui": "Perpaduan akar kuning, bratawali, dan daun salam digunakan secara tradisional untuk membantu mendukung kenyamanan sendi dan otot.",
+      "narasi_soft_selling": "Samulinpro Sehat Sendi dapat dipertimbangkan sebagai herbal pendamping untuk membantu kenyamanan sendi dan otot saat beraktivitas.", "catatan_tambahan": "Cedera, bengkak berat, sendi merah-panas, atau sulit menapak memerlukan pemeriksaan tenaga kesehatan.", "pantangan": []
+    },
+    {
+      "kode": "LMT", "nama_produk": "Limatta Sehat Mata", "halaman_sumber": 5,
+      "deskripsi": "Softgel dengan campuran ekstrak tumbuhan dan minyak nabati untuk mendukung nutrisi mata.", "isi": "100 softgel", "bentuk_sediaan": "Softgel", "aturan_pakai": "2–3 softgel sehari setelah makan.",
+      "produsen": "CV. Jogja Natural Herbal", "nomor_registrasi": "BPOM TR 193325531", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Ekstrak biji anggur","kandungan_utama":"Antioksidan alami","gejala_penyakit":"Nutrisi dan perlindungan mata","narasi_membantu_penyembuhan_herbal":"Ekstrak biji anggur menyediakan antioksidan untuk membantu perlindungan sel.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."},
+        {"nama_bahan":"Ekstrak bilberry, goji berry, wortel, ginkgo biloba, jeruk nipis, alpukat dan seledri","kandungan_utama":"Campuran ekstrak tumbuhan","gejala_penyakit":"Kesehatan dan nutrisi mata","narasi_membantu_penyembuhan_herbal":"Campuran ekstrak tumbuhan membantu melengkapi antioksidan dan nutrisi untuk kesehatan mata.","pantangan_dan_aturan_konsumsi":"Gangguan penglihatan mendadak, nyeri mata berat, atau cedera mata memerlukan pemeriksaan segera."},
+        {"nama_bahan":"Minyak biji kanola dan bunga matahari","kandungan_utama":"Minyak nabati","gejala_penyakit":"Nutrisi mata","narasi_membantu_penyembuhan_herbal":"Minyak nabati membantu membawa komponen larut lemak dalam formula.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."}
+      ],
+      "manfaat_sumber": ["Memenuhi nutrisi mata", "Mencegah dan mengobati rabun jauh atau dekat", "Melindungi retina dan pembuluh darah mata", "Memperbaiki sirkulasi kapiler mata", "Mencegah penurunan daya penglihatan", "Mencegah dan mengobati sakit mata", "Mencegah dan mengobati katarak, glaukoma, dan presbiopia"],
+      "manfaat_disetujui": "pemenuhan nutrisi dan antioksidan untuk menjaga kesehatan mata", "cara_kerja_disetujui": "Ekstrak buah, sayur, dan minyak nabati menyediakan antioksidan serta nutrisi yang membantu memelihara kesehatan mata.",
+      "narasi_soft_selling": "Limatta Sehat Mata dapat dipertimbangkan untuk membantu melengkapi nutrisi dan antioksidan bagi kesehatan mata.", "catatan_tambahan": "Tidak memperbaiki kelainan refraksi dan tidak menggantikan pemeriksaan mata.", "pantangan": []
+    },
+    {
+      "kode": "SWN", "nama_produk": "Sehat Wanita", "halaman_sumber": 5,
+      "deskripsi": "Kapsul herbal dengan kunyit, sirih, kayu manis, dan manjakani untuk mendukung kesehatan wanita.", "isi": "Pilihan 50 kapsul atau 100 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "2 kali sehari, masing-masing 4 kapsul setelah makan.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 173307361", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Kunyit","kandungan_utama":"Curcuma longa","gejala_penyakit":"Kenyamanan menstruasi","narasi_membantu_penyembuhan_herbal":"Kunyit secara tradisional digunakan untuk membantu kenyamanan saat menstruasi.","pantangan_dan_aturan_konsumsi":"Kehamilan atau program hamil perlu dikonsultasikan sebelum penggunaan."},
+        {"nama_bahan":"Daun sirih","kandungan_utama":"Piper betle","gejala_penyakit":"Kebersihan area kewanitaan","narasi_membantu_penyembuhan_herbal":"Daun sirih secara tradisional digunakan untuk mendukung kebersihan area kewanitaan.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."},
+        {"nama_bahan":"Kayu manis","kandungan_utama":"Cinnamomum verum","gejala_penyakit":"Kebugaran wanita","narasi_membantu_penyembuhan_herbal":"Kayu manis melengkapi formula untuk mendukung kebugaran.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."},
+        {"nama_bahan":"Manjakani","kandungan_utama":"Quercus infectoria","gejala_penyakit":"Perawatan wanita","narasi_membantu_penyembuhan_herbal":"Manjakani digunakan secara tradisional sebagai bagian dari perawatan wanita.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."}
+      ],
+      "manfaat_sumber": ["Mencegah dan menyembuhkan kista, endometriosis, dan miom", "Mengatasi nyeri haid, haid tidak teratur, dan keputihan", "Mendukung program hamil", "Mencegah kemandulan", "Mencegah menopause dini", "Membantu radang saluran kemih"],
+      "manfaat_disetujui": "kenyamanan menstruasi dan perawatan kesehatan wanita", "cara_kerja_disetujui": "Kunyit, sirih, kayu manis, dan manjakani digunakan secara tradisional untuk membantu kenyamanan menstruasi dan perawatan area kewanitaan.",
+      "narasi_soft_selling": "Sehat Wanita dapat dipertimbangkan sebagai herbal pendamping untuk membantu kenyamanan menstruasi dan perawatan wanita.", "catatan_tambahan": "Keputihan berbau tajam, perdarahan tidak normal, nyeri hebat, atau program hamil memerlukan konsultasi tenaga kesehatan.",
+      "pantangan": [{"type":"pregnancy","code":"pregnant","label":"Kehamilan","severity":"caution","guidance":"Konsultasikan terlebih dahulu bila sedang hamil atau menjalani program hamil."}]
+    },
+    {
+      "kode": "ZDR", "nama_produk": "Walatra Zedoril-7", "halaman_sumber": 6,
+      "deskripsi": "Kapsul ekstrak daun sirsak, daun sirih merah, dan kulit manggis.", "isi": "Pilihan 60 kapsul atau 100 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "3 kali sehari, masing-masing 2 kapsul setelah makan.",
+      "produsen": "CV. Jogja Natural Herbal", "nomor_registrasi": "BPOM TR 173304521", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Ekstrak daun sirsak","kandungan_utama":"Ekstrak daun sirsak","gejala_penyakit":"Dukungan antioksidan","narasi_membantu_penyembuhan_herbal":"Daun sirsak mengandung senyawa alami yang mendukung kebutuhan antioksidan.","pantangan_dan_aturan_konsumsi":"Tidak digunakan untuk menggantikan terapi kanker atau penyakit kronis."},
+        {"nama_bahan":"Ekstrak daun sirih merah","kandungan_utama":"Ekstrak daun sirih merah","gejala_penyakit":"Kebugaran umum","narasi_membantu_penyembuhan_herbal":"Sirih merah melengkapi formula herbal untuk mendukung kebugaran.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."},
+        {"nama_bahan":"Ekstrak kulit manggis","kandungan_utama":"Ekstrak kulit manggis","gejala_penyakit":"Antioksidan","narasi_membantu_penyembuhan_herbal":"Kulit manggis menyediakan komponen antioksidan alami.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."}
+      ],
+      "manfaat_sumber": ["Menghambat pertumbuhan sel kanker", "Menghancurkan inti sel kanker", "Menghentikan aktivitas sel kanker", "Mengurangi efek samping kemoterapi", "Meningkatkan proliferasi sel", "Sebagai antioksidan", "Sebagai antiradang"],
+      "manfaat_disetujui": "dukungan antioksidan dan kebugaran tubuh", "cara_kerja_disetujui": "Daun sirsak, sirih merah, dan kulit manggis menyediakan senyawa alami yang membantu mendukung kebutuhan antioksidan.",
+      "narasi_soft_selling": "Walatra Zedoril-7 hanya dapat dipertimbangkan sebagai pendamping kebugaran dan bukan pengganti pemeriksaan atau terapi kanker.", "catatan_tambahan": "Produk tidak direkomendasikan otomatis oleh chatbot untuk kanker atau penyakit kronis.", "pantangan": []
+    },
+    {
+      "kode": "AMB", "nama_produk": "Ambe Care", "halaman_sumber": 6,
+      "deskripsi": "Kapsul ekstrak daun ungu dan kunyit putih untuk mendukung kenyamanan saat wasir.", "isi": "100 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "3 kali sehari, masing-masing 2 kapsul setelah makan.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 193326621", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Ekstrak daun ungu","kandungan_utama":"Graptophyllum pictum 70%","gejala_penyakit":"BAB dan kenyamanan wasir","narasi_membantu_penyembuhan_herbal":"Daun ungu secara tradisional digunakan untuk membantu kelancaran BAB dan kenyamanan pada keluhan wasir ringan.","pantangan_dan_aturan_konsumsi":"Perdarahan banyak atau menetap memerlukan pemeriksaan."},
+        {"nama_bahan":"Ekstrak kunyit putih","kandungan_utama":"Curcuma zedoaria 30%","gejala_penyakit":"Kenyamanan pencernaan","narasi_membantu_penyembuhan_herbal":"Kunyit putih melengkapi formula untuk mendukung kenyamanan pencernaan.","pantangan_dan_aturan_konsumsi":"Ikuti aturan pakai."}
+      ],
+      "manfaat_sumber": ["Membuat BAB lebih lancar", "Membantu mengobati wasir dan ambeien", "Mempercepat pembekuan darah", "Menghentikan perdarahan akibat wasir", "Membuat anus lebih nyaman", "Meredakan gatal dan iritasi", "Meningkatkan peredaran darah dan jaringan ikat", "Meredakan peradangan dan rasa sakit", "Menguatkan kapiler dan vena"],
+      "manfaat_disetujui": "kelancaran BAB dan kenyamanan pada keluhan wasir ringan", "cara_kerja_disetujui": "Daun ungu digunakan secara tradisional untuk membantu kelancaran BAB, sedangkan kunyit putih mendukung kenyamanan pencernaan.",
+      "narasi_soft_selling": "Ambe Care dapat dipertimbangkan sebagai herbal pendamping untuk membantu kelancaran BAB dan kenyamanan pada wasir ringan.", "catatan_tambahan": "Perdarahan banyak, nyeri hebat, benjolan membesar, atau keluhan menetap perlu diperiksa.", "pantangan": []
+    },
+    {
+      "kode": "GAR", "nama_produk": "Garlic", "halaman_sumber": 7,
+      "deskripsi": "Kapsul ekstrak bawang hitam.", "isi": "100 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "2 kali sehari, masing-masing 2 kapsul.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 193325651", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Ekstrak bawang hitam","kandungan_utama":"100% ekstrak bawang hitam asli","gejala_penyakit":"Kolesterol, tekanan darah, dan kebugaran metabolik","narasi_membantu_penyembuhan_herbal":"Senyawa organosulfur dan antioksidan pada bawang hitam membantu mendukung pola hidup sehat untuk kolesterol dan tekanan darah.","pantangan_dan_aturan_konsumsi":"Hati-hati bila menggunakan obat pengencer darah, obat tekanan darah, atau obat diabetes."}],
+      "manfaat_sumber": ["Membantu memperbaiki sel hati", "Menurunkan kolesterol", "Menurunkan tekanan darah tinggi", "Menurunkan risiko kanker dan tumor", "Membantu menormalkan gula darah", "Efek antipenuaan", "Meningkatkan metabolisme zat besi", "Membantu stroke dan serangan jantung", "Mencegah dan mengatasi masalah paru-paru"],
+      "manfaat_disetujui": "pola hidup sehat untuk kolesterol, tekanan darah, dan kebugaran metabolik", "cara_kerja_disetujui": "Senyawa organosulfur dan antioksidan bawang hitam membantu mendukung kesehatan pembuluh darah dan metabolisme sebagai pendamping pola hidup sehat.",
+      "narasi_soft_selling": "Garlic dapat dipertimbangkan sebagai pendamping pola hidup sehat untuk membantu menjaga kolesterol dan tekanan darah.", "catatan_tambahan": "Jangan mengubah atau menghentikan obat rutin tanpa arahan tenaga kesehatan.",
+      "pantangan": [{"type":"medication","code":"anticoagulant","label":"Obat pengencer darah","severity":"caution","guidance":"Bawang dapat meningkatkan risiko perdarahan pada sebagian pengguna obat pengencer darah."},{"type":"condition","code":"hypertension","label":"Penggunaan obat hipertensi","severity":"caution","guidance":"Pantau tekanan darah bila juga menggunakan obat hipertensi."},{"type":"condition","code":"diabetes","label":"Penggunaan obat diabetes","severity":"caution","guidance":"Pantau gula darah bila juga menggunakan obat diabetes."}]
+    },
+    {
+      "kode": "LYC", "nama_produk": "Lycozein Softgel", "halaman_sumber": 7,
+      "deskripsi": "Softgel ekstrak likopen dari pigmen merah tomat untuk mendukung kesehatan prostat dan antioksidan.", "isi": "60 softgel", "bentuk_sediaan": "Softgel", "aturan_pakai": "2 kali sehari, masing-masing 2 softgel setelah makan.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 193326621", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Ekstrak likopen","kandungan_utama":"100% ekstrak lycopene dari pigmen merah tomat","gejala_penyakit":"Kesehatan prostat dan antioksidan","narasi_membantu_penyembuhan_herbal":"Likopen merupakan antioksidan yang membantu mendukung perlindungan sel dan kesehatan prostat.","pantangan_dan_aturan_konsumsi":"Gangguan berkemih, nyeri, atau darah pada urine memerlukan pemeriksaan."}],
+      "manfaat_sumber": ["Meningkatkan kekebalan tubuh", "Mengobati radang prostat", "Mencegah dan mengobati kanker prostat", "Mengobati hiperplasia prostat dan prostatitis", "Mengobati penyakit urine", "Meningkatkan kualitas sperma", "Mengurangi risiko kemandulan", "Menekan pertumbuhan sel kanker", "Mengatasi gangguan prostat", "Sebagai antioksidan"],
+      "manfaat_disetujui": "kebutuhan antioksidan dan pemeliharaan kesehatan prostat", "cara_kerja_disetujui": "Likopen dari tomat bekerja sebagai antioksidan yang membantu mendukung perlindungan sel dan pemeliharaan kesehatan prostat.",
+      "narasi_soft_selling": "Lycozein Softgel dapat dipertimbangkan untuk membantu memenuhi kebutuhan antioksidan dan menjaga kesehatan prostat.", "catatan_tambahan": "Tidak menggantikan pemeriksaan gangguan prostat atau saluran kemih.", "pantangan": []
+    },
+    {
+      "kode": "ALB", "nama_produk": "Albucare", "halaman_sumber": 8,
+      "deskripsi": "Kapsul albumin ikan gabus yang kaya protein.", "isi": "100 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "2 kali sehari, masing-masing 2 kapsul.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 193332791", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Ekstrak ikan gabus","kandungan_utama":"Albumin, protein, lemak, besi, kalsium, fosfor, vitamin A, vitamin B1, air dan BDD","gejala_penyakit":"Kebutuhan protein dan pemulihan","narasi_membantu_penyembuhan_herbal":"Albumin dan protein ikan gabus membantu melengkapi kebutuhan protein untuk pemulihan dan pemeliharaan jaringan.","pantangan_dan_aturan_konsumsi":"Hindari bila alergi ikan atau seafood."}],
+      "manfaat_sumber": ["Mengobati tifus", "Membantu membersihkan darah kotor", "Mengobati jantung koroner", "Baik untuk tulang dan gigi", "Mengobati hepatitis", "Membantu memperbaiki gizi buruk pada anak", "Membantu penyakit ginjal", "Mencegah kanker dan tumor", "Mempercepat penyembuhan luka", "Membersihkan lemak darah dan kolesterol"],
+      "manfaat_disetujui": "pemenuhan protein dan pemulihan jaringan tubuh", "cara_kerja_disetujui": "Albumin dan protein dari ikan gabus membantu melengkapi kebutuhan protein yang dibutuhkan tubuh dalam proses pemeliharaan dan pemulihan jaringan.",
+      "narasi_soft_selling": "Albucare dapat dipertimbangkan sebagai pendamping untuk membantu memenuhi kebutuhan protein selama masa pemulihan.", "catatan_tambahan": "Kebutuhan protein pada penyakit ginjal atau hati perlu disesuaikan oleh tenaga kesehatan.",
+      "pantangan": [{"type":"allergy","code":"fish_seafood","label":"Alergi ikan atau seafood","severity":"avoid","guidance":"Hindari bila memiliki alergi ikan atau seafood."},{"type":"condition","code":"kidney","label":"Gangguan ginjal","severity":"caution","guidance":"Kebutuhan protein pada gangguan ginjal perlu disesuaikan tenaga kesehatan."},{"type":"condition","code":"liver","label":"Gangguan hati","severity":"caution","guidance":"Kebutuhan protein pada gangguan hati perlu disesuaikan tenaga kesehatan."}]
+    },
+    {
+      "kode": "SQU", "nama_produk": "Bio Squalene", "halaman_sumber": 8,
+      "deskripsi": "Softgel minyak hati ikan hiu sebagai sumber squalene.", "isi": "30 softgel", "bentuk_sediaan": "Softgel", "aturan_pakai": "1 softgel sehari.",
+      "produsen": "PT. Golden Coral Corporindo", "nomor_registrasi": "POM SD 212334131", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Minyak hati ikan hiu","kandungan_utama":"100% minyak hati ikan hiu","gejala_penyakit":"Antioksidan dan kebugaran","narasi_membantu_penyembuhan_herbal":"Squalene dari minyak hati ikan membantu mendukung kebutuhan antioksidan dan kebugaran tubuh.","pantangan_dan_aturan_konsumsi":"Hindari bila alergi ikan atau seafood."}],
+      "manfaat_sumber": ["Meningkatkan kinerja organ dalam", "Mencegah dan mengobati stroke", "Mempercepat penyembuhan luka", "Menghambat pertumbuhan kanker", "Mencegah dan mengobati diabetes", "Sebagai antiinflamasi dan antioksidan", "Memelihara kesehatan jantung", "Mencegah dan membunuh virus", "Mengeluarkan racun", "Menstabilkan gula darah"],
+      "manfaat_disetujui": "kebutuhan antioksidan dan kebugaran tubuh", "cara_kerja_disetujui": "Squalene dari minyak hati ikan membantu mendukung perlindungan sel terhadap radikal bebas sebagai bagian dari pemeliharaan kebugaran.",
+      "narasi_soft_selling": "Bio Squalene dapat dipertimbangkan untuk membantu memenuhi kebutuhan antioksidan dan menjaga kebugaran.", "catatan_tambahan": "Tidak digunakan sebagai pengganti terapi stroke, diabetes, infeksi, atau penyakit jantung.",
+      "pantangan": [{"type":"allergy","code":"fish_seafood","label":"Alergi ikan atau seafood","severity":"avoid","guidance":"Hindari bila memiliki alergi ikan atau seafood."}]
+    },
+    {
+      "kode": "PRP", "nama_produk": "Propolis SM Brazil", "halaman_sumber": 9,
+      "deskripsi": "Propolis Brazil cair dalam botol tetes.", "isi": "6 ml per botol, 1 boks berisi 7 botol", "bentuk_sediaan": "Cairan tetes", "aturan_pakai": "Teteskan 3–5 tetes ke dalam seperempat gelas air hangat, aduk, lalu minum.",
+      "produsen": "CV. Jogja Natural Herbal", "nomor_registrasi": "BPOM TR 193624961", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Propolis Brazil","kandungan_utama":"100% propolis Brazil kualitas premium","gejala_penyakit":"Daya tahan tubuh, tenggorokan, dan antioksidan","narasi_membantu_penyembuhan_herbal":"Propolis mengandung senyawa alami yang membantu mendukung daya tahan tubuh dan kebutuhan antioksidan.","pantangan_dan_aturan_konsumsi":"Hindari bila alergi lebah, madu, propolis, atau pollen."}],
+      "manfaat_sumber": ["Meningkatkan kekebalan tubuh", "Membantu menurunkan kolesterol", "Membantu mengontrol gula darah", "Mencegah dan mengatasi peradangan", "Membantu pencernaan", "Mempercepat penyembuhan luka", "Memperbaiki jaringan tubuh", "Membantu melegakan pernapasan", "Mengeluarkan racun", "Membantu mengatasi TBC"],
+      "manfaat_disetujui": "daya tahan tubuh, kebutuhan antioksidan, dan kenyamanan tenggorokan", "cara_kerja_disetujui": "Senyawa resin alami pada propolis membantu mendukung respons pertahanan tubuh dan memberi dukungan antioksidan.",
+      "narasi_soft_selling": "Propolis SM Brazil dapat dipertimbangkan sebagai pendamping untuk membantu menjaga daya tahan tubuh dan kenyamanan tenggorokan.", "catatan_tambahan": "Keluhan napas berat atau infeksi menetap memerlukan pemeriksaan.",
+      "pantangan": [{"type":"allergy","code":"bee_honey_pollen","label":"Alergi lebah, madu, propolis, atau pollen","severity":"avoid","guidance":"Hindari bila memiliki alergi terhadap produk lebah, madu, propolis, atau pollen."}]
+    },
+    {
+      "kode": "KMQ", "nama_produk": "KurmaQu", "halaman_sumber": 9,
+      "deskripsi": "Sari kurma dengan madu murni tanpa tambahan gula atau pemanis buatan menurut katalog.", "isi": "350 gram", "bentuk_sediaan": "Sari kurma", "aturan_pakai": "2 kali sehari, masing-masing 2 sendok makan.",
+      "produsen": "CV. Prima Dairy Mubarok", "nomor_registrasi": "BPOM RI MD 866612001100", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Sari kurma","kandungan_utama":"Sari kurma pilihan","gejala_penyakit":"Energi dan nutrisi","narasi_membantu_penyembuhan_herbal":"Sari kurma menyediakan karbohidrat dan nutrisi untuk membantu memenuhi kebutuhan energi.","pantangan_dan_aturan_konsumsi":"Perhatikan kandungan gula, terutama pada diabetes."},
+        {"nama_bahan":"Madu murni","kandungan_utama":"Madu alami","gejala_penyakit":"Energi dan kebugaran","narasi_membantu_penyembuhan_herbal":"Madu membantu menyediakan energi sebagai bagian dari asupan harian.","pantangan_dan_aturan_konsumsi":"Hindari bila alergi madu; jangan diberikan kepada bayi di bawah 1 tahun."}
+      ],
+      "manfaat_sumber": ["Menambah nafsu makan", "Melancarkan pencernaan", "Menormalkan tekanan darah", "Penyembuhan DBD dan tifus", "Memberikan nutrisi", "Memperbanyak dan memberi gizi pada ASI", "Meningkatkan energi dan mengatasi anemia", "Meningkatkan hemoglobin dan trombosit", "Menyehatkan jantung dan mengatasi letih", "Nutrisi ibu hamil, melahirkan, dan menyusui"],
+      "manfaat_disetujui": "pemenuhan energi dan nutrisi harian", "cara_kerja_disetujui": "Sari kurma dan madu menyediakan karbohidrat serta nutrisi yang membantu mendukung energi dan kebugaran.",
+      "narasi_soft_selling": "KurmaQu dapat dipertimbangkan untuk membantu melengkapi energi dan nutrisi harian.", "catatan_tambahan": "Bukan terapi DBD, tifus, anemia, atau trombosit rendah.",
+      "pantangan": [{"type":"allergy","code":"bee_honey_pollen","label":"Alergi madu atau produk lebah","severity":"avoid","guidance":"Hindari bila alergi madu atau produk lebah."},{"type":"condition","code":"diabetes","label":"Diabetes atau pembatasan gula","severity":"caution","guidance":"Perhatikan takaran karena sari kurma dan madu mengandung gula alami."}]
+    },
+    {
+      "kode": "HEX", "nama_produk": "Hexabumin", "halaman_sumber": 10,
+      "deskripsi": "Suplemen anak berbahan madu, albumin ikan gabus, temulawak, dan pegagan.", "isi": "130 ml", "bentuk_sediaan": "Sirup", "aturan_pakai": "Diminum pagi dan sore, masing-masing 2 sendok makan, sesuai petunjuk label.",
+      "produsen": "CV. Herbal Indo Utama", "nomor_registrasi": "BPOM TR 183615831", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Madu asli","kandungan_utama":"Madu asli","gejala_penyakit":"Energi dan nafsu makan anak","narasi_membantu_penyembuhan_herbal":"Madu membantu menyediakan energi bagi anak.","pantangan_dan_aturan_konsumsi":"Jangan diberikan kepada bayi di bawah 1 tahun; hindari bila alergi madu."},
+        {"nama_bahan":"Ekstrak ikan gabus","kandungan_utama":"Sumber albumin","gejala_penyakit":"Protein dan pertumbuhan anak","narasi_membantu_penyembuhan_herbal":"Albumin ikan gabus membantu melengkapi kebutuhan protein anak.","pantangan_dan_aturan_konsumsi":"Hindari bila alergi ikan atau seafood."},
+        {"nama_bahan":"Temulawak dan pegagan","kandungan_utama":"Ekstrak temulawak dan pegagan","gejala_penyakit":"Nafsu makan dan konsentrasi","narasi_membantu_penyembuhan_herbal":"Temulawak dan pegagan digunakan untuk membantu mendukung nafsu makan serta kebugaran anak.","pantangan_dan_aturan_konsumsi":"Gunakan sesuai usia dan petunjuk label."}
+      ],
+      "manfaat_sumber": ["Meningkatkan nafsu makan", "Meningkatkan daya tahan tubuh", "Menambah berat badan anak", "Nutrisi anak penyandang autisme", "Mempercepat pemulihan", "Menstimulasi pertumbuhan otak dan konsentrasi", "Pengobatan demam, flu, dan batuk anak", "Melengkapi nutrisi pertumbuhan anak"],
+      "manfaat_disetujui": "pemenuhan nutrisi, protein, dan kebugaran anak", "cara_kerja_disetujui": "Madu menyediakan energi, albumin ikan gabus melengkapi protein, dan temulawak membantu mendukung nafsu makan anak.",
+      "narasi_soft_selling": "Hexabumin dapat dipertimbangkan untuk membantu melengkapi nutrisi, protein, dan energi anak sesuai aturan usia pada label.", "catatan_tambahan": "Demam tinggi, sesak, anak sangat lemas, atau sulit minum memerlukan pemeriksaan segera.",
+      "pantangan": [{"type":"allergy","code":"fish_seafood","label":"Alergi ikan atau seafood","severity":"avoid","guidance":"Hindari bila anak alergi ikan atau seafood."},{"type":"allergy","code":"bee_honey_pollen","label":"Alergi madu atau produk lebah","severity":"avoid","guidance":"Hindari bila alergi madu atau produk lebah. Jangan diberikan kepada bayi di bawah 1 tahun."}],
+      "subject_type": "child"
+    },
+    {
+      "kode": "MNJ", "nama_produk": "MNJ Jelly Gamat", "halaman_sumber": 10,
+      "deskripsi": "Jelly gamat berbahan teripang emas.", "isi": "250 ml", "bentuk_sediaan": "Jelly cair", "aturan_pakai": "2 kali sehari, masing-masing 3 sendok.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 193629301", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Ekstrak teripang emas","kandungan_utama":"Kolagen, protein, mukopolisakarida, gamapeptide, cell growth factor, saponin, omega 3/6/9, mineral, GAGs, lektin, asam amino","gejala_penyakit":"Pemulihan jaringan, pencernaan, dan kebugaran","narasi_membantu_penyembuhan_herbal":"Protein, kolagen, dan komponen alami teripang membantu mendukung pemeliharaan jaringan dan pemulihan tubuh.","pantangan_dan_aturan_konsumsi":"Hindari bila alergi teripang atau seafood."}],
+      "manfaat_sumber": ["Melancarkan peredaran darah", "Meningkatkan fungsi ginjal", "Meningkatkan metabolisme", "Mengatasi gangguan pernapasan", "Menurunkan kolesterol", "Membantu penyakit jantung", "Menghambat kanker dan tumor", "Memperbaiki cedera", "Meredakan maag atau asam lambung", "Meningkatkan kekebalan tubuh"],
+      "manfaat_disetujui": "pemeliharaan jaringan, pemulihan tubuh, dan kenyamanan pencernaan", "cara_kerja_disetujui": "Protein, kolagen, GAGs, dan asam amino dari teripang membantu mendukung pemeliharaan jaringan dan proses pemulihan tubuh.",
+      "narasi_soft_selling": "MNJ Jelly Gamat dapat dipertimbangkan sebagai pendamping untuk membantu pemeliharaan jaringan dan pemulihan tubuh.", "catatan_tambahan": "Tidak menggantikan terapi penyakit jantung, ginjal, kanker, atau gangguan pernapasan.",
+      "pantangan": [{"type":"allergy","code":"fish_seafood","label":"Alergi teripang atau seafood","severity":"avoid","guidance":"Hindari bila memiliki alergi teripang atau seafood."}]
+    },
+    {
+      "kode": "MSJ", "nama_produk": "Minyak Sapu Jagat", "halaman_sumber": 11,
+      "deskripsi": "Minyak terapi luar berbahan minyak sereh, daun salam, kayu putih, kelapa murni, dan campuran herbal.", "isi": "70 ml", "bentuk_sediaan": "Minyak oles", "aturan_pakai": "Oleskan secukupnya pada bagian tubuh yang memerlukan. Hanya untuk pemakaian luar.",
+      "produsen": "CV. Herbal Indo Utama", "nomor_registrasi": "BPOM QD 153613221", "status_halal": null, "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Minyak sereh, daun salam, kayu putih dan kelapa murni","kandungan_utama":"Oleum citronella 10%, oleum syzygium 10%, oleum cajuputi 10%, virgin coconut oil 10%","gejala_penyakit":"Pegal, nyeri otot, dan rasa tidak nyaman pada sendi","narasi_membantu_penyembuhan_herbal":"Campuran minyak atsiri memberi sensasi hangat yang membantu kenyamanan otot dan sendi.","pantangan_dan_aturan_konsumsi":"Hanya untuk pemakaian luar; hentikan bila timbul iritasi."},
+        {"nama_bahan":"Campuran herbal","kandungan_utama":"Gaharu, adas, mimba, minyak hati ikan hiu, jahe, pandan, cengkeh, dan bahan lain","gejala_penyakit":"Kenyamanan tubuh","narasi_membantu_penyembuhan_herbal":"Campuran herbal melengkapi aroma dan sensasi hangat untuk penggunaan luar.","pantangan_dan_aturan_konsumsi":"Jangan dioleskan pada luka terbuka, mata, atau selaput lendir."}
+      ],
+      "manfaat_sumber": ["Menjaga sistem kekebalan tubuh", "Meredakan nyeri otot dan pegal linu", "Menghilangkan radang dan nyeri sendi", "Mengatasi gejala masuk angin", "Menghangatkan tubuh", "Sebagai minyak terapi", "Mengatasi gatal", "Meredakan keseleo, rematik, dan nyeri tulang"],
+      "manfaat_disetujui": "kenyamanan otot dan sendi melalui pemakaian luar", "cara_kerja_disetujui": "Minyak sereh, kayu putih, jahe, dan minyak atsiri lain memberi sensasi hangat yang membantu merilekskan area otot dan sendi yang terasa tidak nyaman.",
+      "narasi_soft_selling": "Minyak Sapu Jagat dapat dipertimbangkan sebagai minyak oles pendamping untuk membantu rasa nyaman pada otot dan sendi.", "catatan_tambahan": "Khusus pemakaian luar. Jangan digunakan pada luka terbuka.", "pantangan": []
+    },
+    {
+      "kode": "QNC", "nama_produk": "QNC Jelly Gamat", "halaman_sumber": 11,
+      "deskripsi": "Jelly gamat berbahan teripang emas premium.", "isi": "300 ml", "bentuk_sediaan": "Jelly cair", "aturan_pakai": "2 kali sehari, masing-masing 3 sendok.",
+      "produsen": "CV. Jogja Natural Herbal", "nomor_registrasi": "BPOM TR 173301471", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Ekstrak teripang emas","kandungan_utama":"Kolagen, protein, mukopolisakarida, gamapeptide, cell growth factor, saponin, omega 3/6/9, mineral, GAGs, lektin, asam amino","gejala_penyakit":"Pemulihan jaringan, pencernaan, dan kebugaran","narasi_membantu_penyembuhan_herbal":"Protein, kolagen, dan komponen alami teripang membantu mendukung pemeliharaan jaringan dan pemulihan tubuh.","pantangan_dan_aturan_konsumsi":"Hindari bila alergi teripang atau seafood."}],
+      "manfaat_sumber": ["Melancarkan peredaran darah", "Meningkatkan fungsi ginjal", "Meningkatkan metabolisme", "Mengatasi gangguan pernapasan", "Menurunkan kolesterol", "Membantu penyakit jantung", "Menghambat kanker dan tumor", "Memperbaiki cedera", "Meredakan maag atau asam lambung", "Meningkatkan kekebalan tubuh"],
+      "manfaat_disetujui": "pemeliharaan jaringan, pemulihan tubuh, dan kenyamanan pencernaan", "cara_kerja_disetujui": "Protein, kolagen, GAGs, dan asam amino dari teripang membantu mendukung pemeliharaan jaringan dan proses pemulihan tubuh.",
+      "narasi_soft_selling": "QNC Jelly Gamat dapat dipertimbangkan sebagai pendamping untuk membantu pemeliharaan jaringan dan pemulihan tubuh.", "catatan_tambahan": "Tidak menggantikan terapi penyakit jantung, ginjal, kanker, atau gangguan pernapasan.",
+      "pantangan": [{"type":"allergy","code":"fish_seafood","label":"Alergi teripang atau seafood","severity":"avoid","guidance":"Hindari bila memiliki alergi teripang atau seafood."}]
+    },
+    {
+      "kode": "NOUD", "nama_produk": "Natural Oud", "halaman_sumber": 12,
+      "deskripsi": "Sabun perawatan wajah berbahan minyak kelapa, minyak zaitun, madu, lidah buaya, susu kambing, kojic acid, dan allantoin.", "isi": "1 boks berisi 4 sabun, 50 gram per sabun", "bentuk_sediaan": "Sabun wajah", "aturan_pakai": "Basahi sabun, usapkan perlahan pada wajah, diamkan sejenak, lalu bilas dengan air.",
+      "produsen": null, "nomor_registrasi": "BPOM NA 18181204452", "status_halal": null, "link_produk": "",
+      "komposisi": [{"nama_bahan":"Coconut oil, olive oil, honey, beeswax, aloe vera, goat milk, kojic acid dan allantoin","kandungan_utama":"Bahan pembersih dan perawatan kulit","gejala_penyakit":"Perawatan kulit wajah","narasi_membantu_penyembuhan_herbal":"Campuran minyak, lidah buaya, susu kambing, kojic acid, dan allantoin membantu membersihkan serta menjaga kelembapan kulit wajah.","pantangan_dan_aturan_konsumsi":"Hanya untuk pemakaian luar. Hentikan bila iritasi dan hindari area mata."}],
+      "manfaat_sumber": ["Merawat kulit wajah", "Membuat wajah tampak awet muda", "Memperbaiki kulit rusak", "Mengatasi jerawat", "Menyamarkan bercak hitam", "Membersihkan pori", "Mengatasi peradangan kulit", "Sebagai pelembap", "Mencegah penuaan dini", "Meregenerasi sel kulit mati"],
+      "manfaat_disetujui": "pembersihan, kelembapan, dan perawatan kulit wajah", "cara_kerja_disetujui": "Minyak kelapa dan zaitun membantu membersihkan serta menjaga kelembapan, sementara lidah buaya, kojic acid, dan allantoin mendukung perawatan tampilan kulit.",
+      "narasi_soft_selling": "Natural Oud dapat dipertimbangkan sebagai sabun pendamping untuk membantu membersihkan dan merawat kelembapan kulit wajah.", "catatan_tambahan": "Lakukan uji tempel dan hentikan bila timbul iritasi.", "pantangan": []
+    },
+    {
+      "kode": "SAF", "nama_produk": "Saffron Khasmir", "halaman_sumber": 12,
+      "deskripsi": "Bunga saffron Kashmir grade AA tanpa bahan pengawet dan pewarna menurut katalog.", "isi": "Pilihan 0,5 gram atau 1 gram", "bentuk_sediaan": "Helai saffron", "aturan_pakai": "Masukkan 3–7 helai ke dalam segelas air hangat, diamkan sekitar 10 menit, lalu konsumsi.",
+      "produsen": null, "nomor_registrasi": "Uji Lab Sucofindo 00394/SAFFRON", "status_halal": null, "link_produk": "",
+      "komposisi": [{"nama_bahan":"Bunga saffron Kashmir","kandungan_utama":"100% bunga saffron Kashmir grade AA","gejala_penyakit":"Relaksasi, tidur, dan antioksidan","narasi_membantu_penyembuhan_herbal":"Saffron mengandung senyawa antioksidan dan dapat digunakan sebagai pendamping rutinitas relaksasi serta tidur yang sehat.","pantangan_dan_aturan_konsumsi":"Gunakan sesuai takaran; kehamilan atau obat rutin perlu dikonsultasikan terlebih dahulu."}],
+      "manfaat_sumber": ["Mencegah kanker dan diabetes", "Melancarkan haid", "Mengurangi stres dan depresi", "Mengurangi lemak tubuh", "Meningkatkan daya tahan tubuh", "Mengurangi insomnia", "Menghilangkan jerawat", "Mengatasi gangguan pencernaan", "Mengatasi anemia"],
+      "manfaat_disetujui": "relaksasi, rutinitas tidur sehat, dan kebutuhan antioksidan", "cara_kerja_disetujui": "Senyawa alami saffron memberi dukungan antioksidan dan dapat melengkapi rutinitas relaksasi sebelum tidur.",
+      "narasi_soft_selling": "Saffron Khasmir dapat dipertimbangkan sebagai pendamping rutinitas relaksasi dan tidur sehat.", "catatan_tambahan": "Tidak menggantikan penanganan depresi atau gangguan tidur menetap.",
+      "pantangan": [{"type":"pregnancy","code":"pregnant","label":"Kehamilan","severity":"caution","guidance":"Konsultasikan penggunaan saffron saat hamil."}]
+    },
+    {
+      "kode": "PSK", "nama_produk": "Proskin", "halaman_sumber": 13,
+      "deskripsi": "Kapsul ekstrak daun binahong untuk mendukung perawatan kulit dari dalam.", "isi": "60 kapsul", "bentuk_sediaan": "Kapsul", "aturan_pakai": "2 kali sehari, masing-masing 2 kapsul setelah makan.",
+      "produsen": "CV. Ardhi Jaya Yogyakarta", "nomor_registrasi": "BPOM TR 213310581", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [{"nama_bahan":"Ekstrak daun binahong","kandungan_utama":"100% ekstrak daun binahong (heartleaf maderavine madevine)","gejala_penyakit":"Kenyamanan dan pemulihan kulit","narasi_membantu_penyembuhan_herbal":"Binahong secara tradisional digunakan untuk membantu mendukung pemeliharaan dan pemulihan jaringan kulit.","pantangan_dan_aturan_konsumsi":"Kelainan kulit luas, bernanah, melepuh, atau disertai sesak memerlukan pemeriksaan."}],
+      "manfaat_sumber": ["Mengobati berbagai penyakit kulit", "Mengobati alergi dan gatal", "Mempercepat penyembuhan luka", "Membantu menghilangkan jerawat", "Mengobati ruam", "Merawat jaringan kulit", "Mengobati eksim", "Menghilangkan sensasi panas", "Mengobati panu, kurap, dan cacar air", "Mengobati kudis, melasma, dan psoriasis", "Menunda penuaan dini"],
+      "manfaat_disetujui": "pemeliharaan dan kenyamanan jaringan kulit", "cara_kerja_disetujui": "Ekstrak binahong digunakan secara tradisional untuk membantu mendukung proses pemeliharaan dan pemulihan jaringan kulit.",
+      "narasi_soft_selling": "Proskin dapat dipertimbangkan sebagai herbal pendamping untuk membantu pemeliharaan dan kenyamanan kulit.", "catatan_tambahan": "Tidak menggantikan diagnosis dan pengobatan infeksi, alergi berat, atau penyakit kulit kronis.", "pantangan": []
+    },
+    {
+      "kode": "RAD", "nama_produk": "Kopi Radimax", "halaman_sumber": 13,
+      "deskripsi": "Minuman kopi herbal pria dengan susu kambing, kedelai, pasak bumi, dan jahe merah.", "isi": "10 sachet, 25 gram per sachet", "bentuk_sediaan": "Serbuk minuman", "aturan_pakai": "1 sachet, 2 kali sehari setelah makan, atau sekitar 2 jam sebelum aktivitas bersama pasangan, sesuai petunjuk label.",
+      "produsen": "CV. Sami Mandjoer Yogyakarta", "nomor_registrasi": "BPOM TR 193228081", "status_halal": "Halal MUI", "link_produk": "",
+      "komposisi": [
+        {"nama_bahan":"Ekstrak akar pasak bumi","kandungan_utama":"Pasak bumi","gejala_penyakit":"Stamina dan vitalitas pria","narasi_membantu_penyembuhan_herbal":"Pasak bumi digunakan secara tradisional untuk membantu mendukung stamina dan vitalitas pria.","pantangan_dan_aturan_konsumsi":"Hanya untuk pria dewasa; ikuti aturan pakai."},
+        {"nama_bahan":"Ekstrak jahe merah","kandungan_utama":"Jahe merah","gejala_penyakit":"Kebugaran dan rasa hangat","narasi_membantu_penyembuhan_herbal":"Jahe merah memberi sensasi hangat dan mendukung kebugaran.","pantangan_dan_aturan_konsumsi":"Perhatikan bila lambung sensitif."},
+        {"nama_bahan":"Susu kambing dan kedelai","kandungan_utama":"Goat milk powder dan biji kedelai","gejala_penyakit":"Nutrisi dan energi","narasi_membantu_penyembuhan_herbal":"Susu kambing dan kedelai membantu melengkapi protein serta energi.","pantangan_dan_aturan_konsumsi":"Hindari bila alergi susu atau kedelai."}
+      ],
+      "manfaat_sumber": ["Meningkatkan libido", "Mengatasi ejakulasi dini", "Meningkatkan gairah seksual", "Mengatasi disfungsi seksual", "Meningkatkan hormon testosteron", "Meningkatkan stamina dan vitalitas pria", "Mengatasi disfungsi ereksi, impotensi, atau lemah syahwat", "Meningkatkan kesuburan", "Meningkatkan kualitas dan jumlah sperma"],
+      "manfaat_disetujui": "stamina dan vitalitas pria dewasa", "cara_kerja_disetujui": "Pasak bumi dan jahe merah digunakan secara tradisional untuk membantu mendukung stamina, sedangkan susu kambing dan kedelai melengkapi asupan energi serta protein.",
+      "narasi_soft_selling": "Kopi Radimax dapat dipertimbangkan sebagai herbal pendamping untuk membantu stamina dan vitalitas pria dewasa.", "catatan_tambahan": "Keluhan ejakulasi atau ereksi menetap tetap perlu dinilai penyebabnya. Hanya untuk pria dewasa.",
+      "pantangan": [{"type":"allergy","code":"milk_lactose","label":"Alergi susu atau intoleransi laktosa","severity":"avoid","guidance":"Hindari bila alergi susu; pengguna dengan intoleransi laktosa perlu berhati-hati."},{"type":"allergy","code":"soy","label":"Alergi kedelai","severity":"avoid","guidance":"Hindari bila alergi kedelai."},{"type":"condition","code":"gastric","label":"Lambung sensitif atau GERD aktif","severity":"caution","guidance":"Jahe dan kopi dapat terasa kurang nyaman pada lambung sensitif."}],
+      "minimum_age": 18, "subject_type": "adult"
+    }
+  ]
+}

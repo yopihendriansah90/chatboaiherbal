@@ -9,7 +9,7 @@
 
 ## Chatbot Herbal Telegram
 
-MVP ini menerima pesan melalui webhook Telegram dan memakai AI hanya sebagai parser/renderer terbatas. Runtime produk mengutamakan database, sedangkan `12_TERBARU_Produk_Herbal_Terstruktur_n8n_Gemini.json` menjadi sumber import dan fallback selama transisi. State aktif disimpan dalam cache, sedangkan identitas pengguna, sesi, dan riwayat pesan disimpan terenkripsi di database untuk monitoring admin.
+MVP ini menerima pesan melalui webhook Telegram dan memakai AI hanya sebagai parser/renderer terbatas. Runtime produk mengutamakan database, sedangkan `database/data/katalog_produk_walatra.json` menjadi sumber import dan fallback. Katalog tersebut ditranskripsi dari `Katalog Produk Walatra.pdf`; klaim asli disimpan sebagai referensi audit, sedangkan chatbot hanya memakai narasi manfaat yang telah dikurasi. State aktif disimpan dalam cache, sedangkan identitas pengguna, sesi, dan riwayat pesan disimpan terenkripsi di database untuk monitoring admin.
 
 ### Konfigurasi
 
@@ -151,10 +151,12 @@ Biaya dihitung saat response API diterima dan menyimpan snapshot harga serta kur
 Setelah deployment, jalankan:
 
 ```bash
-php artisan migrate --seed --force
+php artisan migrate:fresh --seed --force
 ```
 
-Seeder standar juga menyiapkan Business Profile Walatra, dua Domain Pack, prompt default, 13 kategori rekomendasi, 18 produk, dan 44 baris komposisi. Seluruh seeder bersifat idempotent dan aman dijalankan kembali. API key serta secret Telegram tidak ditulis ke source code. Harga awal model AI merupakan snapshot USD bertanggal tetap dengan URL sumber resmi. Untuk perubahan harga berikutnya, tambahkan versi baru melalui panel agar histori tetap utuh.
+Perintah di atas ditujukan untuk instalasi baru atau reset penuh dan akan menghapus seluruh data sebelumnya. Untuk deployment yang harus mempertahankan pengguna, riwayat chat, harga, link produk, dan konfigurasi, gunakan `php artisan migrate --force` tanpa `fresh`.
+
+Seeder standar juga menyiapkan Business Profile Walatra, dua Domain Pack, prompt default, 18 kategori rekomendasi, 24 produk, dan 44 baris komposisi. `HerbalCatalogSeeder` mengganti katalog lama secara utuh saat sumber lama terdeteksi, tetapi eksekusi berikutnya mempertahankan link dan harga yang telah dimasukkan manual. Link produk awal sengaja kosong dan dapat ditambahkan melalui panel admin. API key serta secret Telegram tidak ditulis ke source code. Harga awal model AI merupakan snapshot USD bertanggal tetap dengan URL sumber resmi. Untuk perubahan harga berikutnya, tambahkan versi baru melalui panel agar histori tetap utuh.
 
 Seeder tidak membuat kurs USD/IDR karena kurs dikelola manual dan berubah dari waktu ke waktu. Setelah deployment pertama, tambahkan **Nilai Dolar** terbaru melalui panel admin.
 
@@ -191,6 +193,12 @@ Webhook mendaftarkan update `message` dan `my_chat_member`. Update kedua dipakai
 ```bash
 php artisan telegram:webhook set
 ```
+
+### Penanganan krisis mental
+
+Pesan yang menunjukkan keinginan bunuh diri, menyakiti diri, keputusasaan berat, atau risiko segera diperiksa oleh aturan lokal sebelum domain gate dan model AI. Dalam fase `mental_crisis`, chatbot menghentikan parser, renderer, screening produk, soft selling, dan link produk. Chatbot melakukan pemeriksaan keselamatan singkat dan mengarahkan pengguna ke orang tepercaya, **119 ekstensi 8 / healing119.id**, serta **112 bila tersedia atau IGD terdekat** untuk risiko segera.
+
+Percakapan tersebut ditandai sebagai darurat pada halaman admin. State krisis tetap aktif pada pesan lanjutan dan hanya dibersihkan melalui `/reset`, sehingga jawaban pendek tidak dapat membawa pengguna kembali ke alur penjualan secara tidak sengaja. Aturan inti ini deterministik dan tidak dapat diturunkan tingkat risikonya oleh hasil model AI.
 
 Retensi pesan dan batas pengguna tidak aktif dapat diatur melalui tab **Percakapan** di Pengaturan Bot. Pembersihan berjalan melalui scheduler dan dapat dijalankan manual:
 

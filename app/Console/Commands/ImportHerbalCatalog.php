@@ -7,7 +7,11 @@ use Illuminate\Console\Command;
 
 class ImportHerbalCatalog extends Command
 {
-    protected $signature = 'herbal:import-catalog {--dry-run : Validasi tanpa menulis data} {--update : Timpa produk yang sudah ada dari JSON} {--path= : Lokasi file JSON}';
+    protected $signature = 'herbal:import-catalog
+        {--dry-run : Validasi tanpa menulis data}
+        {--update : Timpa produk yang sudah ada dari JSON}
+        {--replace : Hapus seluruh katalog lama sebelum mengimpor katalog baru}
+        {--path= : Lokasi file JSON}';
 
     protected $description = 'Import katalog herbal tervalidasi ke database';
 
@@ -17,6 +21,7 @@ class ImportHerbalCatalog extends Command
             $this->option('path') ?: null,
             (bool) $this->option('dry-run'),
             (bool) $this->option('update'),
+            (bool) $this->option('replace'),
         );
         $this->table(['Data', 'Jumlah'], [
             ['Produk', $result['products']],

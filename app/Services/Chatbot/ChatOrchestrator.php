@@ -10,6 +10,7 @@ use App\Models\ChatbotMessage;
 use App\Services\ConversationStore;
 use App\Services\EmergencyDetector;
 use App\Services\HerbalChatbot;
+use App\Services\MentalCrisisDetector;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -22,6 +23,7 @@ class ChatOrchestrator
         private ConversationManager $conversations,
         private HerbalChatbot $chatbot,
         private EmergencyDetector $emergencies,
+        private MentalCrisisDetector $mentalCrises,
         private ConversationStore $store,
         private ChatbotRequestContext $requestContext,
     ) {}
@@ -47,7 +49,7 @@ class ChatOrchestrator
             return $this->retryFailedReply($incoming, $message, $channel);
         }
 
-        if (! $restart && ! $this->emergencies->detects($message->text) && ! $this->chatbot->isGreeting($message->text)) {
+        if (! $restart && ! $this->emergencies->detects($message->text) && ! $this->mentalCrises->detects($message->text) && ! $this->chatbot->isGreeting($message->text)) {
             try {
                 $channel->sendActivity($message->externalConversationId);
             } catch (Throwable) {
@@ -72,24 +74,32 @@ class ChatOrchestrator
             $this->requestContext->clear();
         }
 
-        $outgoing = ChatbotMessage::query()->create([
+        $messages = $this->chatbot->outboundMessages($reply);
+        $outgoing = collect($messages)->map(fn (string $text, int $index) => ChatbotMessage::query()->create([
             'chatbot_conversation_id' => $conversation->id,
             'reply_to_message_id' => $incoming->id,
             'chatbot_channel_identity_id' => $identity->id,
             'channel_integration_id' => $integration->id,
             'direction' => 'outgoing',
             'message_type' => 'text',
-            'content' => $reply,
+            'content' => $text,
             'processing_status' => 'completed',
             'delivery_status' => 'pending',
+            'metadata' => ['sequence' => $index + 1, 'total' => count($messages)],
             'occurred_at' => now(),
             'processed_at' => now(),
-        ]);
+        ]));
 
         $incoming->update(['processing_status' => 'completed', 'processed_at' => now()]);
-        $this->syncConversationSummary($conversation, 2);
+        $this->syncConversationSummary($conversation, 1 + $outgoing->count());
 
-        return $this->deliver($outgoing, $message, $channel);
+        foreach ($outgoing as $outgoingMessage) {
+            if (! $this->deliver($outgoingMessage, $message, $channel)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public function updateStatus(ChannelIdentityStatus $status): void
@@ -131,17 +141,27 @@ class ChatOrchestrator
 
     private function retryFailedReply(ChatbotMessage $incoming, InboundMessage $message, MessagingChannel $channel): bool
     {
-        $reply = $incoming->reply()->latest('id')->first();
-        if (! $reply && $incoming->processing_status === 'failed') {
+        $replies = ChatbotMessage::query()
+            ->where('reply_to_message_id', $incoming->id)
+            ->where('direction', 'outgoing')
+            ->orderBy('id')
+            ->get();
+        if ($replies->isEmpty() && $incoming->processing_status === 'failed') {
             $incoming->delete();
 
             return $this->handle($message, $channel);
         }
-        if (! $reply || $reply->delivery_status === 'delivered') {
+        if ($replies->isEmpty() || $replies->every(fn (ChatbotMessage $reply): bool => $reply->delivery_status === 'delivered')) {
             return true;
         }
 
-        return $this->deliver($reply, $message, $channel);
+        foreach ($replies->where('delivery_status', '!=', 'delivered') as $reply) {
+            if (! $this->deliver($reply, $message, $channel)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function deliver(ChatbotMessage $outgoing, InboundMessage $incoming, MessagingChannel $channel): bool
@@ -192,7 +212,7 @@ class ChatOrchestrator
             'domain_code' => $state['active_domain'] ?? null,
             'category' => $state['facts']['category'] ?? null,
             'product_code' => collect($state['offered_products'] ?? [])->last(),
-            'is_emergency' => ($state['phase'] ?? null) === 'emergency',
+            'is_emergency' => in_array($state['phase'] ?? null, ['emergency', 'mental_crisis'], true),
             'message_count' => $conversation->message_count + $messageIncrement,
             'last_message_at' => now(),
         ]);
@@ -202,7 +222,7 @@ class ChatOrchestrator
     {
         $command = explode('@', strtolower(strtok($message->text, ' ')))[0];
         $isCommand = in_array($command, ['/start', '/reset'], true);
-        if (! $isCommand && ! $this->emergencies->detects($message->text) && ! $this->chatbot->isGreeting($message->text)) {
+        if (! $isCommand && ! $this->emergencies->detects($message->text) && ! $this->mentalCrises->detects($message->text) && ! $this->chatbot->isGreeting($message->text)) {
             try {
                 $channel->sendActivity($message->externalConversationId);
             } catch (Throwable) {
@@ -214,12 +234,18 @@ class ChatOrchestrator
             ? $this->chatbot->reset($message->externalConversationId)
             : $this->chatbot->reply($message->externalConversationId, $message->text);
 
-        return $channel->send(new OutboundMessage(
-            $message->channel,
-            $message->integrationKey,
-            $message->externalConversationId,
-            $reply,
-        ))->successful;
+        foreach ($this->chatbot->outboundMessages($reply) as $text) {
+            if (! $channel->send(new OutboundMessage(
+                $message->channel,
+                $message->integrationKey,
+                $message->externalConversationId,
+                $text,
+            ))->successful) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function persistenceAvailable(): bool

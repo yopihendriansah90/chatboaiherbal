@@ -94,6 +94,16 @@ class ChatbotPersistenceTest extends TestCase
         $this->assertSame('blocked', ChatbotContact::query()->firstOrFail()->status);
     }
 
+    public function test_mental_crisis_is_marked_as_emergency_in_conversation_history(): void
+    {
+        $this->send($this->messagePayload(1003, 'aku pengen mati nih'))->assertOk();
+
+        $conversation = ChatbotConversation::query()->firstOrFail();
+        $this->assertTrue($conversation->is_emergency);
+        $this->assertSame('safety', $conversation->domain_code);
+        $this->assertNull($conversation->product_code);
+    }
+
     public function test_admin_can_open_contact_and_conversation_monitoring_pages(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

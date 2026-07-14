@@ -11,6 +11,7 @@ class DomainGate
         'herbal', 'stamina', 'vitalitas', 'kesehatan', 'badan', 'tenggorokan', 'sariawan',
         'perut', 'kepala', 'pinggang', 'punggung', 'dada', 'bahu', 'leher', 'kaki', 'bernapas',
         'tangan', 'gigi', 'haid', 'menstruasi', 'keputihan',
+        'ejakulasi', 'ereksi', 'libido', 'seksual', 'kejantanan', 'impoten',
     ];
 
     private const COMMON_HEALTH_TYPOS = [

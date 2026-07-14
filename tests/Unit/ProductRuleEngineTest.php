@@ -11,7 +11,7 @@ class ProductRuleEngineTest extends TestCase
     {
         $product = app(ProductRuleEngine::class)->recommend('joints', $this->facts());
 
-        $this->assertSame('KGE', $product['kode']);
+        $this->assertSame('SML', $product['kode']);
     }
 
     public function test_uses_safe_alternative_when_primary_conflicts_with_allergy(): void
@@ -20,16 +20,30 @@ class ProductRuleEngineTest extends TestCase
             'allergies' => 'alergi seafood',
         ]));
 
-        $this->assertSame('PSM', $product['kode']);
+        $this->assertSame('PRP', $product['kode']);
     }
 
     public function test_returns_no_product_when_all_candidates_conflict(): void
     {
-        $product = app(ProductRuleEngine::class)->recommend('joints', $this->facts([
-            'allergies' => 'alergi seafood',
+        $product = app(ProductRuleEngine::class)->recommend('respiratory', $this->facts([
+            'allergies' => 'alergi lebah dan propolis',
         ]));
 
         $this->assertNull($product);
+    }
+
+    public function test_alternatives_filter_previous_product_and_dosage_form(): void
+    {
+        $products = app(ProductRuleEngine::class)->alternatives(
+            'nutrition',
+            $this->facts(['age_group' => '32 tahun']),
+            ['KMQ'],
+            'capsule',
+            2,
+        );
+
+        $this->assertSame(['KLR', 'ALB'], array_column($products, 'kode'));
+        $this->assertSame(['Kapsul', 'Kapsul'], array_column($products, 'bentuk_sediaan'));
     }
 
     private function facts(array $overrides = []): array

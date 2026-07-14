@@ -54,8 +54,15 @@ class ProductResource extends Resource
             Section::make('Informasi tervalidasi')->schema([
                 Textarea::make('short_description')->label('Deskripsi singkat')->rows(3),
                 Textarea::make('full_description')->label('Deskripsi lengkap')->rows(5),
+                TextInput::make('package_content')->label('Isi / kemasan')->maxLength(255),
+                TextInput::make('dosage_form')->label('Bentuk sediaan')->maxLength(80),
                 Textarea::make('usage_instruction')->label('Aturan konsumsi')->rows(4),
+                TextInput::make('manufacturer')->label('Produsen')->maxLength(255),
+                TextInput::make('registration_number')->label('Nomor registrasi')->maxLength(100),
+                TextInput::make('halal_status')->label('Status halal')->maxLength(100),
                 Textarea::make('additional_notes')->label('Catatan tambahan')->rows(4),
+                TextInput::make('source_document')->label('Dokumen sumber')->maxLength(255),
+                TextInput::make('source_page')->label('Halaman sumber')->numeric()->minValue(1),
             ])->columns(2),
             Section::make('Stok')
                 ->relationship('inventory')
