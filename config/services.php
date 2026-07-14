@@ -32,6 +32,11 @@ return [
         'renderer_timeout' => (int) env('OPENAI_RENDERER_TIMEOUT', 12),
     ],
 
+    'currencyfreaks' => [
+        'api_key' => env('CURRENCYFREAKS_API_KEY'),
+        'timeout' => (int) env('CURRENCYFREAKS_TIMEOUT', 10),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Third Party Services

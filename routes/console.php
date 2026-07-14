@@ -5,6 +5,7 @@ use App\Models\ChatbotContact;
 use App\Models\ChatbotConversation;
 use App\Models\ChatbotMessage;
 use App\Services\BotConfiguration;
+use App\Services\CurrencyFreaksService;
 use App\Services\DomainGate;
 use App\Services\ProductRuleEngine;
 use App\Services\TelegramClient;
@@ -94,4 +95,44 @@ Artisan::command('chatbot:purge-history {--days= : Override masa retensi}', func
     $this->info("{$deleted} pesan yang melewati retensi telah dihapus.");
 })->purpose('Menghapus riwayat chat lama dan memperbarui status kontak');
 
+Artisan::command('exchange-rate:sync {--dry-run : Ambil dan validasi tanpa menyimpan} {--force : Izinkan perubahan di atas batas peringatan} {--automatic : Hanya berjalan jika sinkronisasi otomatis aktif}', function () {
+    $service = app(CurrencyFreaksService::class);
+
+    try {
+        if ($this->option('dry-run')) {
+            $preview = $service->fetchLatest();
+            $this->table(
+                ['Pasangan', 'Kurs API', 'Kurs aktif', 'Perubahan', 'Waktu API', 'Peringatan'],
+                [[
+                    'USD/IDR',
+                    number_format($preview['rate'], 2, ',', '.'),
+                    $preview['current_rate'] === null ? '-' : number_format($preview['current_rate'], 2, ',', '.'),
+                    $preview['difference_percent'] === null ? '-' : number_format($preview['difference_percent'], 2, ',', '.').'%',
+                    $preview['response_at'],
+                    $preview['warning'] ? 'YA' : 'tidak',
+                ]],
+            );
+
+            return Command::SUCCESS;
+        }
+
+        $rate = $this->option('automatic')
+            ? $service->syncAutomatically()
+            : $service->sync((bool) $this->option('force'));
+        if (! $rate) {
+            $this->info('Sinkronisasi otomatis tidak aktif; tidak ada perubahan.');
+
+            return Command::SUCCESS;
+        }
+        $this->info('Kurs USD/IDR tersimpan: Rp '.number_format((float) $rate->rate, 2, ',', '.'));
+
+        return Command::SUCCESS;
+    } catch (Throwable $exception) {
+        $this->error('Sinkronisasi CurrencyFreaks gagal. Periksa konfigurasi, kuota, koneksi, dan status sumber pada panel admin.');
+
+        return Command::FAILURE;
+    }
+})->purpose('Mengambil dan menyimpan kurs USD/IDR dari CurrencyFreaks');
+
 Schedule::command('chatbot:purge-history')->dailyAt('02:30')->withoutOverlapping();
+Schedule::command('exchange-rate:sync --automatic')->dailyAt('09:00')->withoutOverlapping();

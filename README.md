@@ -158,6 +158,22 @@ Seeder standar juga menyiapkan Business Profile Walatra, dua Domain Pack, prompt
 
 Seeder tidak membuat kurs USD/IDR karena kurs dikelola manual dan berubah dari waktu ke waktu. Setelah deployment pertama, tambahkan **Nilai Dolar** terbaru melalui panel admin.
 
+### Kurs USD/IDR dari CurrencyFreaks
+
+Halaman **AI Usage → Nilai Dolar** mendukung input manual dan pengambilan kurs dari CurrencyFreaks. Tekan **Konfigurasi API** untuk menyimpan API key secara terenkripsi, mengatur batas peringatan perubahan kurs, dan memilih sinkronisasi otomatis. API key yang sudah disimpan tidak pernah ditampilkan kembali.
+
+Tekan **Ambil kurs API** untuk memanggil endpoint `latest`, mengambil hanya nilai `rates.IDR` dari respons, membandingkannya dengan kurs aktif, lalu mengonfirmasi sebelum menyimpan. Endpoint sengaja dipanggil tanpa parameter `symbols` agar kompatibel dengan paket gratis; menurut dokumentasi provider, filter mata uang tertentu hanya tersedia pada paket berbayar. Setiap nilai tersimpan sebagai record histori baru; kegagalan API tidak menonaktifkan atau menimpa kurs lama. Kurs ini bersifat indikatif dari provider dan bukan kurs transaksi bank atau JISDOR. Referensi format respons dan parameter tersedia di [dokumentasi CurrencyFreaks](https://currencyfreaks.com/documentation).
+
+Perintah operasional:
+
+```bash
+php artisan exchange-rate:sync --dry-run
+php artisan exchange-rate:sync
+php artisan exchange-rate:sync --force
+```
+
+Sinkronisasi otomatis berjalan setiap hari pukul 09.00 WIB jika toggle-nya diaktifkan dan scheduler Laravel berjalan. `CURRENCYFREAKS_API_KEY` di `.env` hanya disediakan sebagai fallback untuk deployment awal; konfigurasi database diprioritaskan.
+
 Di production, token bot, webhook secret, dan webhook URL Telegram dapat disimpan langsung melalui **Operasional → Pengaturan Bot → Telegram**. Runtime Telegram dan validasi webhook memprioritaskan record `telegram-primary` pada `channel_integrations`, lalu memakai `bot_settings` dan `.env` sebagai fallback transisi. Secret disimpan memakai encrypted cast Laravel dan tidak pernah ditampilkan kembali oleh form.
 
 ### Pengguna dan riwayat percakapan
@@ -165,6 +181,10 @@ Di production, token bot, webhook secret, dan webhook URL Telegram dapat disimpa
 Semua pesan Telegram baru dinormalisasi melalui channel adapter sebelum masuk ke chatbot core. Identitas channel, kontak, sesi konsultasi, pesan masuk, pesan keluar, dan status pengiriman disimpan pada tabel terpisah. Isi pesan dan metadata channel memakai encrypted cast Laravel; payload webhook lengkap tidak disimpan.
 
 Menu **Chatbot → Pengguna Chatbot** (`/admin/chatbot-contacts`) menampilkan pengguna terbaru, channel, username/ID, Chat ID, status, serta jumlah aktivitas. Detail identitas ditampilkan melalui modal ringkas. Menu **Chatbot → Percakapan** (`/admin/chatbot-conversations`) menampilkan sesi terbaru dan riwayat pesan untuk admin.
+
+Halaman Percakapan mendukung pencarian kata atau kalimat di dalam isi pesan terenkripsi, filter pengirim, tanggal, channel, pengguna, kategori, produk, status, dan kondisi darurat. Pencarian dilakukan di server dalam batch dan hasilnya di-cache singkat tanpa membuat kolom isi chat plaintext.
+
+Admin dapat mengunduh satu percakapan, beberapa percakapan terpilih, atau seluruh hasil filter sebagai JSON versi `1.0`. Identitas pengguna dianonimkan secara default; opsi **Sertakan identitas pengguna** harus diaktifkan secara eksplisit jika audit memang membutuhkan nama, username, atau ID channel. Setiap ekspor dicatat pada `conversation_exports` tanpa menyimpan isi chat atau kata pencarian mentah di log audit.
 
 Webhook mendaftarkan update `message` dan `my_chat_member`. Update kedua dipakai untuk menandai pengguna yang memblokir atau mengaktifkan kembali bot. Pasang ulang webhook setelah deployment:
 
