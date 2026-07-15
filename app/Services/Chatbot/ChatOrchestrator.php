@@ -6,13 +6,15 @@ use App\Contracts\MessagingChannel;
 use App\Data\ChannelIdentityStatus;
 use App\Data\InboundMessage;
 use App\Data\OutboundMessage;
+use App\Jobs\DeliverOutboundMessage;
 use App\Models\ChatbotMessage;
 use App\Services\ConversationStore;
+use App\Services\CustomerMemoryService;
 use App\Services\EmergencyDetector;
 use App\Services\HerbalChatbot;
 use App\Services\MentalCrisisDetector;
+use App\Services\TrainingCandidateCollector;
 use Illuminate\Database\QueryException;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Throwable;
 
@@ -26,9 +28,13 @@ class ChatOrchestrator
         private MentalCrisisDetector $mentalCrises,
         private ConversationStore $store,
         private ChatbotRequestContext $requestContext,
+        private ConversationOperations $operations,
+        private CustomerMemoryService $memories,
+        private ConsultationManager $consultations,
+        private TrainingCandidateCollector $trainingCandidates,
     ) {}
 
-    public function handle(InboundMessage $message, MessagingChannel $channel): bool
+    public function handle(InboundMessage $message, MessagingChannel $channel, ?string $correlationId = null): bool
     {
         if (! $this->persistenceAvailable()) {
             return $this->handleLegacy($message, $channel);
@@ -43,11 +49,22 @@ class ChatOrchestrator
             $message->externalConversationId,
             $restart,
         );
+        $this->memories->hydrateConversation($identity->contact, $conversation->uuid, $this->store);
 
-        $incoming = $this->recordIncoming($message, $conversation->id, $identity->id, $integration->id);
+        $incoming = $this->recordIncoming($message, $conversation->id, $identity->id, $integration->id, $correlationId);
         if (! $incoming->wasRecentlyCreated) {
             return $this->retryFailedReply($incoming, $message, $channel);
         }
+
+        if ($conversation->bot_mode !== 'automatic') {
+            $incoming->update(['processing_status' => 'completed', 'processed_at' => now()]);
+            $this->syncConversationSummary($conversation, 1);
+
+            return true;
+        }
+
+        $handoffRequested = $this->operations->shouldHandoff($message->text);
+        $consultationOpener = $this->chatbot->isConsultationOpener($message->text);
 
         if (! $restart && ! $this->emergencies->detects($message->text) && ! $this->mentalCrises->detects($message->text) && ! $this->chatbot->isGreeting($message->text)) {
             try {
@@ -61,7 +78,9 @@ class ChatOrchestrator
         try {
             $reply = $restart
                 ? $this->chatbot->reset($conversation->uuid)
-                : $this->chatbot->reply($conversation->uuid, $message->text);
+                : ($handoffRequested
+                    ? 'Baik kak, percakapan ini saya teruskan ke tim Customer Service. Mohon tunggu sebentar ya.'
+                    : $this->chatbot->reply($conversation->uuid, $message->text));
         } catch (Throwable $exception) {
             $incoming->update([
                 'processing_status' => 'failed',
@@ -74,9 +93,26 @@ class ChatOrchestrator
             $this->requestContext->clear();
         }
 
+        if ($handoffRequested) {
+            $this->operations->requestHandoff($conversation, 'Pengguna meminta bantuan manusia.');
+        }
+
         $messages = $this->chatbot->outboundMessages($reply);
+        $state = $this->store->get($conversation->uuid);
+        $case = $this->consultations->syncFromState(
+            $conversation,
+            $state,
+            $incoming->id,
+            $consultationOpener,
+        );
+        if ($case) {
+            $incoming->update(['consultation_case_id' => $case->id]);
+        }
+        $decision = $state['last_decision'] ?? null;
         $outgoing = collect($messages)->map(fn (string $text, int $index) => ChatbotMessage::query()->create([
             'chatbot_conversation_id' => $conversation->id,
+            'consultation_case_id' => $case?->id,
+            'correlation_id' => $correlationId,
             'reply_to_message_id' => $incoming->id,
             'chatbot_channel_identity_id' => $identity->id,
             'channel_integration_id' => $integration->id,
@@ -85,18 +121,24 @@ class ChatOrchestrator
             'content' => $text,
             'processing_status' => 'completed',
             'delivery_status' => 'pending',
-            'metadata' => ['sequence' => $index + 1, 'total' => count($messages)],
+            'metadata' => array_filter(['sequence' => $index + 1, 'total' => count($messages), 'decision' => $decision]),
             'occurred_at' => now(),
             'processed_at' => now(),
         ]));
 
         $incoming->update(['processing_status' => 'completed', 'processed_at' => now()]);
         $this->syncConversationSummary($conversation, 1 + $outgoing->count());
+        $this->trainingCandidates->capture(
+            $conversation,
+            $incoming,
+            $outgoing->first(),
+            $reply,
+            $state,
+            $handoffRequested,
+        );
 
         foreach ($outgoing as $outgoingMessage) {
-            if (! $this->deliver($outgoingMessage, $message, $channel)) {
-                return false;
-            }
+            DeliverOutboundMessage::dispatch($outgoingMessage->id)->afterCommit();
         }
 
         return true;
@@ -109,11 +151,12 @@ class ChatOrchestrator
         }
     }
 
-    private function recordIncoming(InboundMessage $message, int $conversationId, int $identityId, int $integrationId): ChatbotMessage
+    private function recordIncoming(InboundMessage $message, int $conversationId, int $identityId, int $integrationId, ?string $correlationId = null): ChatbotMessage
     {
         try {
             return ChatbotMessage::query()->create([
                 'chatbot_conversation_id' => $conversationId,
+                'correlation_id' => $correlationId,
                 'chatbot_channel_identity_id' => $identityId,
                 'channel_integration_id' => $integrationId,
                 'external_event_id' => $message->eventId,
@@ -155,54 +198,11 @@ class ChatOrchestrator
             return true;
         }
 
-        foreach ($replies->where('delivery_status', '!=', 'delivered') as $reply) {
-            if (! $this->deliver($reply, $message, $channel)) {
-                return false;
-            }
+        foreach ($replies->whereNotIn('delivery_status', ['delivered', 'dead']) as $reply) {
+            DeliverOutboundMessage::dispatch($reply->id)->afterCommit();
         }
 
         return true;
-    }
-
-    private function deliver(ChatbotMessage $outgoing, InboundMessage $incoming, MessagingChannel $channel): bool
-    {
-        $result = $channel->send(new OutboundMessage(
-            channel: $incoming->channel,
-            integrationKey: $incoming->integrationKey,
-            externalConversationId: $incoming->externalConversationId,
-            text: $outgoing->content,
-        ));
-
-        if ($result->successful) {
-            $outgoing->update([
-                'external_message_id' => $result->externalMessageId,
-                'delivery_status' => 'delivered',
-                'delivered_at' => now(),
-                'error_code' => null,
-                'failed_at' => null,
-            ]);
-
-            return true;
-        }
-
-        $outgoing->update([
-            'delivery_status' => 'failed',
-            'error_code' => $result->errorCode,
-            'failed_at' => now(),
-        ]);
-
-        if ($result->errorCode === 'telegram_403') {
-            $outgoing->identity?->update(['status' => 'blocked']);
-            $outgoing->identity?->contact?->update(['status' => 'blocked']);
-        }
-
-        Log::warning('Channel message delivery failed', [
-            'channel' => $incoming->channel,
-            'error_code' => $result->errorCode,
-            'conversation_id' => $outgoing->chatbot_conversation_id,
-        ]);
-
-        return false;
     }
 
     private function syncConversationSummary($conversation, int $messageIncrement): void

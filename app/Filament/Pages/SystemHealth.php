@@ -22,6 +22,11 @@ class SystemHealth extends Page
 
     protected string $view = 'filament.pages.system-health';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->hasRole('analyst') ?? false;
+    }
+
     public function getTitle(): string
     {
         return 'Status Sistem Chatbot';

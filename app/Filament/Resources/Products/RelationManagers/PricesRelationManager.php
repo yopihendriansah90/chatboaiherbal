@@ -25,7 +25,7 @@ class PricesRelationManager extends RelationManager
             TextInput::make('price')->label('Harga')->prefix('Rp')->numeric()->minValue(0)->required(),
             TextInput::make('currency')->default('IDR')->required()->maxLength(3),
             DateTimePicker::make('effective_from')->label('Berlaku sejak')->default(now()),
-            DateTimePicker::make('effective_until')->label('Berakhir'), Toggle::make('is_active')->label('Aktif')->default(true),
+            DateTimePicker::make('effective_until')->label('Berakhir')->after('effective_from'), Toggle::make('is_active')->label('Aktif')->default(true),
         ]);
     }
 

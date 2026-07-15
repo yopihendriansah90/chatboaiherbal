@@ -26,6 +26,8 @@ class HerbalChatbot
 
     public const ASK_PERMISSION = 'Tentu boleh dong, kak 😊 Ceritakan saja dengan santai. Aku siap mendengarkan dan bantu sebisaku.';
 
+    public const CONSULTATION_OPENING = 'Tentu bisa, kak 😊 Ceritakan saja dengan santai. Konsultasinya untuk kakak sendiri atau orang lain, dan apa keluhan utamanya?';
+
     public const ACKNOWLEDGEMENT = 'Siap kak 😊 Kalau ada hal lain yang ingin ditanyakan atau diceritakan, aku masih di sini ya.';
 
     public const OFF_TOPIC = 'Maaf ya, kak, untuk saat ini aku fokus membantu informasi tentang Walatra, keluhan kesehatan, dan produk herbal. Kalau ada yang berkaitan dengan itu, cerita saja ya 😊';
@@ -61,13 +63,17 @@ class HerbalChatbot
         private DomainRouter $domainRouter,
         private BusinessProfileResolver $businesses,
         private CompanyProfileEngine $companyProfile,
+        private IndonesianTypoNormalizer $typos,
+        private TrainingRuleEngine $trainingRules,
+        private RadimaxConversationPolicy $radimaxPolicy,
+        private PersonaResponseFactory $personaResponses,
     ) {}
 
     public function reset(int|string $chatId): string
     {
         $this->store->forget($chatId);
 
-        return self::WELCOME;
+        return $this->personaResponses->response(PersonaResponseFactory::WELCOME);
     }
 
     public function reply(int|string $chatId, string $message): string
@@ -80,11 +86,20 @@ class HerbalChatbot
         if (($state['phase'] ?? null) === 'mental_crisis') {
             return $this->handleMentalCrisisFollowup($chatId, $message, $state);
         }
+        if ($this->emergencies->detects($message)) {
+            return $this->rememberEmergency($chatId, $message);
+        }
         if ($this->isGreeting($message)) {
-            return $this->remember($chatId, $message, self::GREETING);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::GREETING));
+        }
+        if ($trainingRule = $this->trainingRules->match($message, $state)) {
+            return $this->rememberTrainingRuleDecision($chatId, $message, $state, $trainingRule);
+        }
+        if ($policy = $this->radimaxPolicy->evaluate($message, $state)) {
+            return $this->rememberPolicyDecision($chatId, $message, $state, $policy);
         }
         if ($this->isCapabilityQuestion($message)) {
-            return $this->remember($chatId, $message, self::CAPABILITIES);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::CAPABILITIES));
         }
         if ($this->isProductCatalogQuestion($message)) {
             return $this->remember($chatId, $message, $this->productCatalogReply($chatId));
@@ -96,19 +111,25 @@ class HerbalChatbot
             return $this->remember($chatId, $message, $ingredientReply);
         }
         if ($this->isIdentityQuestion($message)) {
-            return $this->remember($chatId, $message, self::ASSISTANT_IDENTITY);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::IDENTITY));
         }
         if ($this->isThanks($message)) {
-            return $this->remember($chatId, $message, self::THANK_YOU);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::THANK_YOU));
         }
         if ($this->isHowAreYou($message)) {
-            return $this->remember($chatId, $message, self::HOW_ARE_YOU);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::HOW_ARE_YOU));
+        }
+        if ($this->isConsultationOpener($message)) {
+            return $this->startConsultation($chatId, $message);
         }
         if ($this->isAskingPermission($message)) {
-            return $this->remember($chatId, $message, self::ASK_PERMISSION);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::ASK_PERMISSION));
         }
         if ($this->isAcknowledgement($message)) {
-            return $this->remember($chatId, $message, self::ACKNOWLEDGEMENT);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::ACKNOWLEDGEMENT));
+        }
+        if ($safetyFollowup = $this->safetyDecisionFollowupReply($state, $message)) {
+            return $this->remember($chatId, $message, $safetyFollowup);
         }
         if ($followup = $this->productFollowupReply($chatId, $state, $message)) {
             return $this->remember($chatId, $message, $followup);
@@ -131,21 +152,34 @@ class HerbalChatbot
             || $messageRequestsProduct;
         $standaloneScreeningAnswer = ($state['phase'] ?? null) === 'screening'
             && $this->isStandaloneScreeningAnswer($message, $state['missing_fields'] ?? []);
+        $subjectContextAnswer = $detectedSubject !== null
+            && empty($state['facts']['complaint'])
+            && ($this->isSubjectOnlyProductRequest($message)
+                || (in_array($state['phase'] ?? null, ['identify_subject', 'screening'], true)
+                    && in_array('complaint', $state['missing_fields'] ?? [], true)
+                    && $this->isSubjectOnlyAnswer($message)));
         $localDomain = $this->domainRouter->local($message, $state);
         if (! $standaloneScreeningAnswer && $localDomain === 'company_profile') {
             return $this->replyCompanyProfile($chatId, $message, $state);
         }
-        if (! $standaloneScreeningAnswer && ($localDomain === 'off_topic' || $this->domain->isClearlyOffTopic($message)
+        if (! $standaloneScreeningAnswer && ! $subjectContextAnswer
+            && ($localDomain === 'off_topic' || $this->domain->isClearlyOffTopic($message)
             || (empty($state['facts']['complaint'])
                 && ! $this->domain->hasHealthSignal($message)
                 && ! ($sexualContext['is_health'] ?? false)))) {
-            return $this->remember($chatId, $message, self::OFF_TOPIC);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::OFF_TOPIC));
         }
-        if ($this->emergencies->detects($message)) {
+        $awaitingRedFlagAnswer = ($state['phase'] ?? null) === 'screening'
+            && in_array('red_flags', $state['missing_fields'] ?? [], true);
+        if ($this->emergencies->detects($message)
+            || ($awaitingRedFlagAnswer && $this->emergencies->detectsScreeningAnswer($message))) {
             return $this->rememberEmergency($chatId, $message);
         }
 
         $originalFacts = $state['facts'] ?? [];
+        $medicationAnswer = in_array('medications', $state['missing_fields'] ?? [], true)
+            ? $this->extractMedicationAnswer($message)
+            : null;
         $correctedSex = $this->detectSexOnlyAnswer($message);
         if ($correctedSex !== null && ! empty($originalFacts['complaint'])) {
             $state['facts']['sex'] = $correctedSex;
@@ -165,6 +199,7 @@ class HerbalChatbot
 
         $parserStartedAt = hrtime(true);
         $handledLocally = $correctedSex !== null
+            || $subjectContextAnswer
             || ($sexualContext['is_health'] ?? false)
             || ($state['facts'] !== $originalFacts && $standaloneScreeningAnswer);
         if ($handledLocally) {
@@ -193,8 +228,29 @@ class HerbalChatbot
             try {
                 $parsed = ParsedMessage::fromArray($this->ai->respond($message, $state));
             } catch (Throwable) {
-                return self::FAILURE;
+                return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::FAILURE));
             }
+        }
+
+        if (($parsed->intent === 'off_topic' || $parsed->domain === 'off_topic')
+            && $localDomain === 'health_herbal'
+            && $messageRequestsProduct
+            && $detectedSubject !== null) {
+            Log::notice('Overriding conflicting AI domain with deterministic health route', [
+                'ai_domain' => $parsed->domain,
+                'ai_intent' => $parsed->intent,
+                'subject' => $detectedSubject,
+            ]);
+            $parsed = new ParsedMessage(
+                intent: 'health',
+                confidence: 'high',
+                category: null,
+                emergency: false,
+                facts: [
+                    'subject' => $detectedSubject,
+                    'sex' => $this->sexFromSubject($detectedSubject),
+                ],
+            );
         }
 
         Log::info('Herbal parser completed', [
@@ -207,10 +263,10 @@ class HerbalChatbot
         ]);
 
         if ($parsed->intent === 'off_topic' || $parsed->domain === 'off_topic') {
-            return $this->remember($chatId, $message, self::OFF_TOPIC);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::OFF_TOPIC));
         }
         if (($parsed->domain === 'company_profile' || $parsed->intent === 'company_info') && $localDomain !== 'company_profile') {
-            return $this->remember($chatId, $message, self::CLARIFY);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::CLARIFY));
         }
         if ($parsed->domain === 'company_profile' || $parsed->intent === 'company_info') {
             return $this->replyCompanyProfile($chatId, $message, $state, $parsed);
@@ -218,14 +274,26 @@ class HerbalChatbot
         $continuingHealth = ! empty($state['facts']['complaint'])
             && in_array($parsed->intent, ['health', 'ambiguous'], true);
         if (($parsed->intent !== 'health' && ! $continuingHealth) || $parsed->confidence === 'low') {
-            return $this->remember($chatId, $message, self::CLARIFY);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::CLARIFY));
         }
         if ($parsed->emergency) {
             return $this->rememberEmergency($chatId, $message);
         }
 
         $parsedFacts = array_filter($parsed->facts, fn ($value) => $value !== null && $value !== '');
-        $incomingSubject = $detectedSubject ?? $this->normalizeSubject($parsedFacts['subject'] ?? null);
+        if (! isset($parsedFacts['age_years']) && isset($parsedFacts['age_group'])) {
+            $age = (int) filter_var((string) $parsedFacts['age_group'], FILTER_SANITIZE_NUMBER_INT);
+            if ($age > 0 && $age <= 120) {
+                $parsedFacts['age_years'] = $age;
+            }
+        }
+        $parsedSubject = $parsedFacts['subject'] ?? null;
+        $incomingSubject = $detectedSubject;
+        if ($incomingSubject === null && $this->isAnaphoricSubject($parsedSubject)) {
+            $incomingSubject = $this->normalizeSubject($state['facts']['subject'] ?? null);
+        } elseif ($incomingSubject === null) {
+            $incomingSubject = $this->normalizeSubject($parsedSubject);
+        }
         if ($incomingSubject !== null && $this->subjectChanged($state['facts']['subject'] ?? null, $incomingSubject)) {
             $state = $this->resetHealthCase($state, $incomingSubject);
             $productRequested = $messageRequestsProduct;
@@ -233,6 +301,8 @@ class HerbalChatbot
         if ($incomingSubject !== null) {
             $parsedFacts['subject'] = $incomingSubject;
             $parsedFacts['sex'] = $this->sexFromSubject($incomingSubject) ?? ($parsedFacts['sex'] ?? null);
+        } else {
+            unset($parsedFacts['subject']);
         }
         $facts = array_replace($state['facts'] ?? [], $parsedFacts);
         if ($parsed->category !== null) {
@@ -246,17 +316,45 @@ class HerbalChatbot
         $product = null;
         if ($plan === null) {
             $category = (string) ($facts['category'] ?? 'unsupported_health');
-            $product = $this->rules->recommend($category, $facts);
-            $plan = $product
-                ? $this->recommendationPlan($product, $category, $facts)
-                : new ResponsePlan(
+            if ($category === 'unsupported_health') {
+                $complaint = trim((string) ($facts['complaint'] ?? 'tersebut'));
+                $plan = new ResponsePlan(
                     action: 'unavailable',
-                    fallbackText: 'Baik, berdasarkan kondisi yang disampaikan, belum ada produk dalam katalog yang aman untuk direkomendasikan saat ini.',
+                    fallbackText: "Untuk keluhan {$complaint}, saat ini belum ada produk dalam katalog yang memiliki klaim aktif dan sesuai, kak. Aku tidak mau memilihkan produk secara asal.",
                     knownFacts: $facts,
                     category: $category,
                 );
+            } else {
+                $product = $this->rules->recommend($category, $facts);
+                if ($product) {
+                    $plan = $this->recommendationPlan($product, $category, $facts);
+                } elseif ($this->hasDeclaredMedication($facts['medications'] ?? null)) {
+                    $product = $this->rules->consultationOptions($category, $facts, 1)[0] ?? null;
+                    $plan = $product
+                        ? $this->consultationOptionPlan($product, $category, $facts)
+                        : new ResponsePlan(
+                            action: 'consult',
+                            fallbackText: 'Karena ada obat rutin yang sedang digunakan, aku belum menemukan opsi pendamping yang cukup aman untuk ditampilkan. Jangan hentikan obat dokter; sebaiknya konsultasikan kebutuhan herbalnya kepada dokter atau apoteker.',
+                            knownFacts: $facts,
+                            category: $category,
+                        );
+                } else {
+                    $plan = new ResponsePlan(
+                        action: 'unavailable',
+                        fallbackText: 'Baik, berdasarkan kondisi yang disampaikan, belum ada produk dalam katalog yang aman untuk direkomendasikan saat ini.',
+                        knownFacts: $facts,
+                        category: $category,
+                    );
+                }
+            }
         }
         $reply = $this->renderPlan($plan);
+        if ($medicationAnswer !== null) {
+            $acknowledgement = $medicationAnswer['corrected']
+                ? "Baik kak, aku catat nama obat yang disebut “{$medicationAnswer['reported']}” — kemungkinan maksudnya {$medicationAnswer['canonical']}; mohon koreksi kalau berbeda."
+                : "Baik kak, aku catat obat yang sedang digunakan: {$medicationAnswer['canonical']}.";
+            $reply = $acknowledgement.' '.$reply;
+        }
 
         Log::info('Herbal decision completed', [
             'intent' => $parsed->intent,
@@ -266,10 +364,17 @@ class HerbalChatbot
             'product_code' => $plan->product['code'] ?? null,
         ]);
 
-        $state['phase'] = $plan->action === 'recommend' ? 'recommendation' : 'screening';
+        $state['phase'] = in_array($plan->action, ['recommend', 'consult'], true) ? 'recommendation' : 'screening';
         $state['active_domain'] = 'health_herbal';
         $state['facts'] = $facts;
         $state['missing_fields'] = $plan->missingFields;
+        $state['last_decision'] = [
+            'action' => $plan->action,
+            'category' => $facts['category'] ?? null,
+            'product_code' => $plan->product['code'] ?? null,
+            'safety' => $plan->product['safety'] ?? null,
+            'decided_at' => now()->toIso8601String(),
+        ];
         $state['history'][] = ['role' => 'user', 'text' => $message];
         $state['history'][] = ['role' => 'model', 'text' => str_replace(self::MESSAGE_BREAK, "\n\n", $reply)];
         if ($product) {
@@ -298,7 +403,31 @@ class HerbalChatbot
             );
         }
         if (empty($facts['complaint'])) {
-            return new ResponsePlan('clarify', self::CLARIFY, $facts, ['complaint', 'subject']);
+            $subject = $this->normalizeSubject($facts['subject'] ?? null);
+            if ($subject !== null) {
+                $reference = $this->subjectReference($subject);
+                $fallback = $subject === 'diri sendiri'
+                    ? 'Tentu kak, aku bantu pelan-pelan ya. Apa keluhan utama yang sedang kakak rasakan?'
+                    : "Tentu kak, aku bantu pelan-pelan untuk {$reference} ya. Apa keluhan utama yang sedang dirasakan {$reference}?";
+
+                return new ResponsePlan(
+                    action: 'ask_screening',
+                    fallbackText: $fallback,
+                    knownFacts: $facts,
+                    missingFields: ['complaint'],
+                    goal: 'Memahami keluhan utama orang yang akan dibantu sebelum screening keamanan.',
+                    emotion: 'peduli',
+                    empathyLevel: 'supportive',
+                    forbiddenContent: ['Jangan tanyakan lagi siapa yang mengalami keluhan.', 'Jangan rekomendasikan produk sebelum screening keamanan selesai.'],
+                );
+            }
+
+            return new ResponsePlan(
+                'clarify',
+                $this->personaResponses->response(PersonaResponseFactory::CLARIFY),
+                $facts,
+                ['complaint', 'subject'],
+            );
         }
         $category = (string) ($facts['category'] ?? 'unsupported_health');
         $subjectReference = $this->subjectReference($facts['subject'] ?? null);
@@ -394,10 +523,13 @@ class HerbalChatbot
                     ['sex'] => "Apakah {$subjectReference} laki-laki atau perempuan, kak?",
                     default => "Boleh tahu usia {$subjectReference}, kak?",
                 };
+                $opening = $subjectReference === 'kakak'
+                    ? 'Aku mengerti, keluhan itu pasti membuat kakak kurang nyaman. '
+                    : "Aku ikut prihatin, keluhan yang dialami {$subjectReference} pasti membuatnya kurang nyaman. ";
 
                 return new ResponsePlan(
                     'ask_screening',
-                    $question,
+                    $opening.$question,
                     $facts,
                     $demographicMissing,
                     $facts['category'] ?? null,
@@ -433,7 +565,7 @@ class HerbalChatbot
         if (empty($facts['conditions'])) {
             $missing[] = 'conditions';
         }
-        if (empty($facts['medications'])) {
+        if (empty($facts['medications']) || $this->isMedicationUnspecified($facts['medications'])) {
             $missing[] = 'medications';
         }
         if ($this->needsPregnancyScreening($facts) && empty($facts['pregnancy'])) {
@@ -464,6 +596,7 @@ class HerbalChatbot
             if (preg_match('/^\s*(\d{1,3})\s*$/u', $message, $matches)
                 || preg_match('/\b(\d{1,3})\s*(?:tahun|thn)\b/iu', $message, $matches)) {
                 $facts['age_group'] = $matches[1].' tahun';
+                $facts['age_years'] = (int) $matches[1];
             }
         }
 
@@ -478,6 +611,20 @@ class HerbalChatbot
             $frequency = $this->extractFrequencyAnswer($message);
             if ($frequency !== null) {
                 $facts['frequency'] = $frequency;
+            }
+        }
+
+        if (empty($facts['medications']) && in_array('medications', $missingFields, true)) {
+            $medication = $this->extractMedicationAnswer($message);
+            if ($medication !== null) {
+                $facts['medications'] = $medication['canonical'];
+            }
+        }
+
+        if (empty($facts['conditions']) && in_array('conditions', $missingFields, true)) {
+            $condition = $this->extractConditionAnswer($message);
+            if ($condition !== null) {
+                $facts['conditions'] = $condition;
             }
         }
 
@@ -516,6 +663,7 @@ class HerbalChatbot
             && (bool) preg_match('/^\d{1,3}(?:\s*(?:tahun|thn))?$/iu', $normalized))
             || (in_array('duration', $missingFields, true) && $this->extractDurationAnswer($message) !== null)
             || (in_array('frequency', $missingFields, true) && $this->extractFrequencyAnswer($message) !== null)
+            || (in_array('medications', $missingFields, true) && $this->extractMedicationAnswer($message) !== null)
             || (in_array('sex', $missingFields, true)
                 && in_array($normalized, ['laki-laki', 'laki laki', 'pria', 'cowok', 'perempuan', 'wanita', 'cewek'], true));
     }
@@ -524,16 +672,22 @@ class HerbalChatbot
     {
         $normalized = $this->normalizeScreeningAnswer($message);
 
-        return (bool) preg_match(
+        if ((bool) preg_match(
             '/^(?:(?:kayaknya|sepertinya|rasanya|setahu saya)\s+)?(?:(?:tidak|tdk|nggak|ngga|ngak|ngk|gak|ga|enggak|engga|kagak|kaga|ndak)\s*(?:ada|punya)?|belum\s+ada|gaada|gada)(?:\s+sama sekali)?$/u',
+            $normalized,
+        )) {
+            return true;
+        }
+
+        return (bool) preg_match(
+            '/^(?:tidak|tdk|nggak|ngga|ngak|ngk|gak|ga|enggak|engga)\s+ada\s+(?=.*\b(?:alergi|penyakit|obat)\b)(?:alergi|penyakit(?:\s+tertentu)?|obat(?:\s+rutin)?|yang\s+rutin\s+diminum|dan|atau|maupun|,|\s)+$/u',
             $normalized,
         );
     }
 
     private function normalizeScreeningAnswer(string $message): string
     {
-        $normalized = preg_replace('/[\p{P}\p{S}]+/u', ' ', mb_strtolower(trim($message))) ?? '';
-        $normalized = trim(preg_replace('/\s+/u', ' ', $normalized) ?? '');
+        $normalized = $this->typos->normalize($message);
         $fillers = '(?:sih|kok|deh|ya|iya|yah|kak|kaka|kakak|min|admin|nih|dong|aja|saja|pak|bapak|bu|ibu|mbak|mas|gan)';
         $normalized = preg_replace('/^(?:(?:oh|oke|ok|baik|iya|ya)\s+)+/u', '', $normalized) ?? $normalized;
 
@@ -570,9 +724,73 @@ class HerbalChatbot
         $normalized = preg_replace('/\s+(?:sih|kok|deh|ya|kak|min|admin)$/u', '', $normalized) ?? $normalized;
 
         return preg_match(
-            '/^(?:(?:hampir\s+)?setiap\s+(?:kali|berhubungan)|sering(?:\s+banget)?|selalu|kadang(?:\s+kadang)?|sesekali|jarang|baru\s+sekali)$/u',
+            '/^(?:(?:hampir\s+)?(?:setiap|tiap)\s+(?:hari|kali(?:\s+berhubungan)?|berhubungan)|setiap\s+saat\s+berhubungan|sering(?:\s+(?:banget|sekali))?|selalu|kadang(?:\s+kadang)?|sesekali|jarang|baru\s+sekali)$/u',
             $normalized,
         ) ? $normalized : null;
+    }
+
+    /** @return array{reported:string,canonical:string,corrected:bool}|null */
+    private function extractMedicationAnswer(string $message): ?array
+    {
+        $normalized = $this->normalizeSocialText($message);
+        $matched = preg_match('/^(?:(?:iya|ya)\s+)?(?:ada\s+)?obat\s+(.+)$/u', $normalized, $matches)
+            || preg_match('/\b(?:sedang\s+)?(?:minum|meminum|konsumsi|mengonsumsi)\s+(?:obat\s+)?([\pL\pN][\pL\pN -]*?)(?:\s+(?:ya|kak|min|admin))?$/u', $normalized, $matches);
+        if (! $matched) {
+            return null;
+        }
+
+        $reported = trim(preg_replace('/\s+(?:ya|kak|min|admin)$/u', '', $matches[1]) ?? $matches[1]);
+        if ($reported === '' || $this->isMedicationUnspecified($reported)) {
+            return null;
+        }
+
+        $canonical = match ($reported) {
+            'amlodifin', 'amlodipine' => 'amlodipin',
+            default => $reported,
+        };
+
+        return ['reported' => $reported, 'canonical' => $canonical, 'corrected' => $canonical !== $reported];
+    }
+
+    private function extractConditionAnswer(string $message): ?string
+    {
+        $normalized = $this->normalizeSocialText($message);
+        $conditions = [
+            'darah tinggi' => 'darah tinggi',
+            'hipertensi' => 'hipertensi',
+            'diabetes' => 'diabetes',
+            'gula darah' => 'gula darah',
+            'penyakit ginjal' => 'penyakit ginjal',
+            'gangguan ginjal' => 'gangguan ginjal',
+            'penyakit hati' => 'penyakit hati',
+            'gerd' => 'GERD',
+            'maag' => 'maag',
+        ];
+
+        foreach ($conditions as $needle => $canonical) {
+            if (preg_match('/\b'.preg_quote($needle, '/').'\b/u', $normalized)) {
+                return $canonical;
+            }
+        }
+
+        return null;
+    }
+
+    private function hasDeclaredMedication(mixed $medications): bool
+    {
+        $medications = $this->normalizeScreeningAnswer((string) $medications);
+
+        return $medications !== '' && ! in_array($medications, ['tidak', 'tidak ada', 'nggak ada', 'gak ada', 'ga ada'], true);
+    }
+
+    private function isMedicationUnspecified(mixed $medications): bool
+    {
+        $medications = $this->normalizeScreeningAnswer((string) $medications);
+
+        return (bool) preg_match(
+            '/^(?:ada\s+)?(?:obat|obat rutin|obat dokter|obat darah tinggi|obat hipertensi|obat gula|obat diabetes|nama belum diketahui|tidak tahu namanya)$/u',
+            $medications,
+        ) || str_contains($medications, 'nama belum diketahui');
     }
 
     private function naturalList(array $items): string
@@ -592,7 +810,7 @@ class HerbalChatbot
 
     private function detectSubject(string $message): ?string
     {
-        $normalized = mb_strtolower($message);
+        $normalized = $this->normalizeSocialText($message);
         $thirdPartyPatterns = [
             'anak' => '/\b(?:anak(?:ku| saya| aku)?|putra(?:ku| saya)?|putri(?:ku| saya)?)\b/u',
             'kakak' => '/\b(?:kakakku|kakak saya|kakak aku|kakaknya)\b/u',
@@ -648,6 +866,13 @@ class HerbalChatbot
             str_contains($subject, 'saudara') || str_contains($subject, 'kerabat') || str_contains($subject, 'orang lain') => 'orang lain',
             default => $subject,
         };
+    }
+
+    private function isAnaphoricSubject(mixed $subject): bool
+    {
+        $subject = mb_strtolower(trim((string) $subject));
+
+        return in_array($subject, ['dia', 'ia', 'beliau', 'orangnya', 'yang bersangkutan'], true);
     }
 
     private function resetHealthCase(array $state, string $subject): array
@@ -773,26 +998,52 @@ class HerbalChatbot
             fallbackText: 'Baik kak, terima kasih sudah menjelaskan 😊',
             knownFacts: $facts,
             category: $category,
-            product: [
-                'code' => $product['kode'],
-                'name' => $product['nama_produk'],
-                'benefit' => $this->productBenefit($product, $label),
-                'mechanism' => $this->productExplanation($product, $category),
-                'description' => $product['deskripsi'] ?? '',
-                'usage_instruction' => $product['aturan_pakai'] ?? '',
-                'ingredients' => array_values(array_filter(array_column($product['komposisi'] ?? [], 'nama_bahan'))),
-                'registration_number' => $product['nomor_registrasi'] ?? '',
-                'halal_status' => $product['status_halal'] ?? '',
-                'url' => $product['link_produk'],
-                'price' => $product['_price'] ?? null,
-                'currency' => $product['_currency'] ?? 'IDR',
-                'stock' => $product['_stock'] ?? null,
-            ],
+            product: $this->productContext($product, $category, $label),
         );
+    }
+
+    private function consultationOptionPlan(array $product, string $category, array $facts): ResponsePlan
+    {
+        $label = $this->rules->label($category);
+
+        return new ResponsePlan(
+            action: 'consult',
+            fallbackText: 'Karena ada obat dokter yang rutin digunakan, herbal tidak boleh menggantikan atau membuat obat tersebut dihentikan. Aku tetap bisa menunjukkan satu opsi pendamping yang relevan untuk dibicarakan dengan dokter atau apoteker sebelum mulai dikonsumsi.',
+            knownFacts: $facts,
+            category: $category,
+            product: $this->productContext($product, $category, $label),
+            goal: 'Memperkenalkan opsi pendamping secara aman tanpa memberi instruksi mulai konsumsi sebelum persetujuan tenaga kesehatan.',
+            empathyLevel: 'supportive',
+            forbiddenContent: ['Jangan menyuruh mulai minum produk.', 'Jangan memberikan dosis.', 'Jangan menyuruh menghentikan obat dokter.'],
+        );
+    }
+
+    private function productContext(array $product, string $category, string $label): array
+    {
+        return [
+            'code' => $product['kode'],
+            'name' => $product['nama_produk'],
+            'benefit' => $this->productBenefit($product, $label),
+            'mechanism' => $this->productExplanation($product, $category),
+            'description' => $product['deskripsi'] ?? '',
+            'usage_instruction' => $product['aturan_pakai'] ?? '',
+            'ingredients' => array_values(array_filter(array_column($product['komposisi'] ?? [], 'nama_bahan'))),
+            'registration_number' => $product['nomor_registrasi'] ?? '',
+            'halal_status' => $product['status_halal'] ?? '',
+            'url' => $product['link_produk'],
+            'price' => $product['_price'] ?? null,
+            'currency' => $product['_currency'] ?? 'IDR',
+            'stock' => $product['_stock'] ?? null,
+            'safety' => $product['_safety_assessment'] ?? ['outcome' => 'allow', 'guidance' => []],
+        ];
     }
 
     private function renderPlan(ResponsePlan $plan): string
     {
+        if ($plan->action === 'consult' && $plan->product !== null) {
+            return $this->renderConsultationOption($plan);
+        }
+
         $directProductRequest = $plan->action === 'recommend'
             && ($plan->knownFacts['product_requested'] ?? false) === true;
         $sensitiveLocalFlow = $plan->category === 'male_vitality';
@@ -841,6 +1092,10 @@ class HerbalChatbot
         if (($plan->product['stock']['tracked'] ?? false) === true) {
             $details .= "\nStok: ".(($plan->product['stock']['available'] ?? 0) > 0 ? 'tersedia' : 'habis');
         }
+        if (($plan->product['safety']['outcome'] ?? 'allow') === 'caution') {
+            $guidance = array_values(array_filter($plan->product['safety']['guidance'] ?? []));
+            $details .= "\n\n⚠️ Perhatian: ".($guidance[0] ?? 'Konsultasikan dengan tenaga kesehatan bila sedang menggunakan obat rutin atau memiliki kondisi khusus.');
+        }
         if (filled($plan->product['url'] ?? null)) {
             $details .= "\n\nKalau kakak ingin melihat detail komposisi dan produknya, bisa cek di sini ya:\n{$plan->product['url']}";
         }
@@ -848,6 +1103,30 @@ class HerbalChatbot
         $details .= "\n\nKalau kakak ingin tanya manfaat, komposisi, atau cara pakainya, tinggal bilang ya 😊";
 
         return $education.self::MESSAGE_BREAK.$details;
+    }
+
+    private function renderConsultationOption(ResponsePlan $plan): string
+    {
+        $product = $plan->product;
+        $benefit = rtrim((string) ($product['benefit'] ?? 'mendukung kebugaran'), '.');
+        $details = "🌿 Opsi pendamping untuk dikonsultasikan: {$product['name']}\n";
+        $details .= "Manfaat yang tercatat: {$benefit}.";
+        if (($product['ingredients'] ?? []) !== []) {
+            $details .= "\nKomposisi utama: ".implode(', ', array_slice($product['ingredients'], 0, 5)).'.';
+        }
+        $legalities = array_values(array_filter([
+            $product['registration_number'] ?? null,
+            $product['halal_status'] ?? null,
+        ]));
+        if ($legalities !== []) {
+            $details .= "\nLegalitas: ".implode(' • ', $legalities).'.';
+        }
+        if (filled($product['price'] ?? null)) {
+            $details .= "\nHarga aktif: Rp".number_format((float) $product['price'], 0, ',', '.').'.';
+        }
+        $details .= "\n\nBelum untuk langsung diminum ya, kak. Tunjukkan nama, komposisi, dan obat rutin kepada dokter/apoteker. Jika dinyatakan boleh, aku bantu lanjutkan informasi pemakaiannya atau cara pesan.";
+
+        return $plan->fallbackText.self::MESSAGE_BREAK.$details;
     }
 
     /** @return list<string> */
@@ -975,6 +1254,27 @@ class HerbalChatbot
         return null;
     }
 
+    private function isSubjectOnlyAnswer(string $message): bool
+    {
+        $normalized = $this->normalizeSocialText($message);
+
+        return (bool) preg_match(
+            '/^(?:(?:ini|konsultasinya)\s+)?(?:buat|untuk)\s+(?:diri\s+sendiri|saya|aku|ibu|bapak|ayah|anak|suami|istri|kakak|adik|teman|sepupu)(?:\s+(?:saya|aku))?$/u',
+            $normalized,
+        );
+    }
+
+    private function isSubjectOnlyProductRequest(string $message): bool
+    {
+        $normalized = $this->normalizeSocialText($message);
+        $subject = '(?:diri\s+sendiri|saya|aku|ibu|bapak|ayah|anak|suami|istri|kakak|adik|teman|sepupu)(?:\s+(?:saya|aku))?';
+
+        return (bool) preg_match(
+            '/^(?:tolong\s+)?(?:cari(?:kan)?\s+)?(?:obat\s+)?(?:herbal|produk)(?:nya)?\s+(?:buat|untuk)\s+'.$subject.'$/u',
+            $normalized,
+        );
+    }
+
     private function isKnownIngredientTerm(string $term): bool
     {
         $common = [
@@ -1093,6 +1393,9 @@ class HerbalChatbot
     private function productFollowupReply(int|string $chatId, array $state, string $message): ?string
     {
         $normalized = mb_strtolower(trim($message));
+        if ($claimReply = $this->productClaimCompatibilityReply($state, $normalized)) {
+            return $claimReply;
+        }
         $dosagePreference = $this->detectDosagePreference($normalized);
         $alternativeRequested = $dosagePreference !== null || (bool) preg_match(
             '/\b(?:selain|alternatif|pilihan\s+lain|produk\s+lain|yang\s+lain|ada\s+yang\s+lain|ganti\s+produk)\b/u',
@@ -1107,6 +1410,7 @@ class HerbalChatbot
             'benefit' => '/\b(?:khasiat|manfaat|fungsi|kegunaan)(?:nya)?\b|\bcara\s+kerja(?:nya)?\b/u',
             'ingredients' => '/\b(?:komposisi|kandungan|bahan)(?:nya)?\b/u',
             'legality' => '/\b(?:bpom|legalitas|izin\s+edar|halal)(?:nya)?\b/u',
+            'price' => '/\b(?:harga|harganya|berapa\s+harganya|berapa\s+rupiah|berapa|brp)(?:\s+(?:dong|ya|kak|min))?\b/u',
             'link' => '/\b(?:link|tautan|beli|pesan|order)(?:nya)?\b/u',
             'detail' => '/\b(?:detail|deskripsi|produk\s+tadi|yang\s+tadi)(?:nya)?\b/u',
         ];
@@ -1125,6 +1429,11 @@ class HerbalChatbot
             return null;
         }
 
+        $requiresApproval = ($state['last_decision']['safety']['outcome'] ?? null) === 'consult';
+        if ($requiresApproval && in_array($intent, ['usage', 'link'], true)) {
+            return 'Aku bisa bantu setelah dokter atau apoteker menyatakan kombinasi ini boleh, kak. Untuk sekarang jangan mulai minum, mengubah dosis, atau menghentikan obat dokter berdasarkan chat ini ya.';
+        }
+
         $name = $product['nama_produk'];
         $benefit = $this->productBenefit($product, 'mendukung kesehatan dan kebugaran');
 
@@ -1139,6 +1448,9 @@ class HerbalChatbot
             'legality' => ($legalities = array_values(array_filter([$product['nomor_registrasi'] ?? null, $product['status_halal'] ?? null]))) !== []
                 ? "Legalitas {$name}: ".implode(' • ', $legalities).'.'
                 : "Maaf kak, data legalitas {$name} belum tercatat.",
+            'price' => filled($product['_price'] ?? null)
+                ? "Harga aktif {$name}: Rp".number_format((float) $product['_price'], 0, ',', '.').', kak.'
+                : "Maaf kak, harga aktif {$name} belum tersedia di sistem.",
             'link' => filled($product['link_produk'] ?? null)
                 ? "Ini link {$name}, kak: {$product['link_produk']}"
                 : "Link {$name} belum tersedia di sistem, kak. Kakak masih bisa tanya detail produk atau cara pakainya dulu ya 😊",
@@ -1151,6 +1463,27 @@ class HerbalChatbot
         };
     }
 
+    private function safetyDecisionFollowupReply(array $state, string $message): ?string
+    {
+        if (($state['last_decision']['action'] ?? null) !== 'consult') {
+            return null;
+        }
+        $normalized = $this->normalizeSocialText($message);
+        $asksPermission = (bool) preg_match(
+            '/\b(?:(?:jadi|berarti)\s+)?(?:tidak|gak|ga|nggak)\s+boleh\s+(?:minum|konsumsi|pakai)?\s*(?:obat\s+)?(?:herbal|produk|ini)?\b|\b(?:herbal|produk)(?:nya)?\s+(?:boleh|aman)\s+(?:tidak|gak|ga|nggak)\b/u',
+            $normalized,
+        );
+        if (! $asksPermission) {
+            return null;
+        }
+
+        $productCode = $state['last_decision']['product_code'] ?? null;
+        $option = is_string($productCode) ? ($this->products->findMany([$productCode], 1)[0] ?? null) : null;
+        $productReference = is_array($option) ? ' Opsi yang tadi aku tampilkan tetap bisa dibawa sebagai bahan diskusi.' : '';
+
+        return 'Bukan berarti pasti tidak boleh, kak. Karena ada obat dokter yang rutin digunakan, kecocokan komposisi dan waktunya perlu dikonfirmasi dulu kepada dokter atau apoteker. Jangan hentikan atau mengubah obat dokter.'.$productReference;
+    }
+
     private function productAlternativeReply(
         int|string $chatId,
         array $state,
@@ -1160,6 +1493,11 @@ class HerbalChatbot
         $category = (string) ($state['facts']['category'] ?? '');
         if ($category === '') {
             return 'Boleh kak 😊 Tapi aku perlu tahu dulu alternatifnya ingin untuk keluhan atau kebutuhan yang mana?';
+        }
+        if ($category === 'unsupported_health') {
+            $complaint = trim((string) ($state['facts']['complaint'] ?? 'tersebut'));
+
+            return "Untuk keluhan {$complaint}, saat ini belum ada produk lain di katalog yang memiliki klaim aktif dan sesuai, kak. Produk sebelumnya juga tidak memiliki klaim khusus untuk keluhan tersebut, jadi aku tidak mau memilihkan alternatif secara asal.";
         }
 
         if ($detectedDosageForm !== null) {
@@ -1203,6 +1541,40 @@ class HerbalChatbot
         ]);
 
         return $this->renderPlan($this->recommendationPlan($product, $category, $planFacts));
+    }
+
+    private function productClaimCompatibilityReply(array $state, string $message): ?string
+    {
+        if (! preg_match('/\b(?:apakah\s+)?(?:bisa|dapat|bisakah)\b.{0,30}\b(?:mengobati|menyembuhkan|mengatasi|meredakan)\s+(.+?)(?:[?.!]|$)/u', $message, $matches)) {
+            return null;
+        }
+
+        $need = trim(preg_replace('/\s+(?:ya|kak|nih|sih)$/u', '', $matches[1]) ?? $matches[1]);
+        $need = preg_replace('/\b(\pL+)(?:\s+\1)+\b/iu', '$1', $need) ?? $need;
+        $code = $state['catalog_context']['selected_product_code']
+            ?? collect($state['offered_products'] ?? [])->last();
+        if (! is_string($code) || $need === '') {
+            return null;
+        }
+
+        $product = $this->products->findMany([$code], 1)[0] ?? null;
+        if (! is_array($product)) {
+            return null;
+        }
+
+        $approvedClaims = collect($product['_claims'] ?? [])
+            ->filter(fn (array $claim): bool => in_array($claim['type'] ?? null, ['benefit', 'mechanism', 'soft_selling'], true))
+            ->pluck('text')
+            ->filter()
+            ->implode(' ');
+        $benefit = $this->productBenefit($product, 'mendukung kesehatan dan kebugaran');
+        $supportsNeed = str_contains(mb_strtolower($approvedClaims), mb_strtolower($need));
+
+        if (! $supportsNeed) {
+            return "Tidak, kak. Berdasarkan klaim aktif di katalog, {$product['nama_produk']} tidak ditujukan untuk mengobati atau mengatasi {$need}. Produk ini hanya dapat dijelaskan sebagai pendamping untuk membantu {$benefit}.";
+        }
+
+        return "{$product['nama_produk']} memiliki klaim untuk membantu {$benefit}, tetapi bukan jaminan mengobati {$need}, kak.";
     }
 
     private function detectDosagePreference(string $message): ?string
@@ -1334,11 +1706,84 @@ class HerbalChatbot
         return $reply;
     }
 
+    /** @param array{decision:string,reply:string,state_patch?:array<string,mixed>} $policy */
+    private function rememberPolicyDecision(int|string $chatId, string $message, array $state, array $policy): string
+    {
+        $patch = $policy['state_patch'] ?? [];
+        if (isset($patch['facts']) && is_array($patch['facts'])) {
+            $state['facts'] = array_replace($state['facts'] ?? [], $patch['facts']);
+            unset($patch['facts']);
+        }
+        if (isset($patch['catalog_context']) && is_array($patch['catalog_context'])) {
+            $state['catalog_context'] = array_replace($state['catalog_context'] ?? [], $patch['catalog_context']);
+            unset($patch['catalog_context']);
+        }
+        $state = array_replace($state, $patch);
+        $state['last_policy_decision'] = [
+            'policy' => 'radimax_training',
+            'decision' => $policy['decision'],
+            'decided_at' => now()->toIso8601String(),
+        ];
+        $this->store->put($chatId, $state);
+
+        return $this->remember($chatId, $message, $policy['reply']);
+    }
+
+    /** @param array{rule_id:int,code:string,intent:string,decision:string,reply:string} $rule */
+    private function rememberTrainingRuleDecision(int|string $chatId, string $message, array $state, array $rule): string
+    {
+        $state['last_training_rule'] = [
+            'rule_id' => $rule['rule_id'],
+            'code' => $rule['code'],
+            'intent' => $rule['intent'],
+            'decision' => $rule['decision'],
+            'matched_at' => now()->toIso8601String(),
+        ];
+        $this->store->put($chatId, $state);
+
+        return $this->remember($chatId, $message, $rule['reply']);
+    }
+
+    private function startConsultation(int|string $chatId, string $message): string
+    {
+        $state = $this->store->get($chatId);
+        $state['active_domain'] = 'health_herbal';
+        $state['phase'] = 'identify_subject';
+        $state['missing_fields'] = ['subject', 'complaint'];
+        $state['domain_states']['health_herbal'] = [
+            'phase' => 'identify_subject',
+            'facts' => $state['facts'],
+            'missing_fields' => ['subject', 'complaint'],
+            'offered_products' => $state['offered_products'] ?? [],
+        ];
+        $state['history'][] = ['role' => 'user', 'text' => $message];
+        $reply = $this->personaResponses->response(PersonaResponseFactory::CONSULTATION_OPENING);
+        $state['history'][] = ['role' => 'model', 'text' => $reply];
+        $this->store->put($chatId, $state);
+
+        return $reply;
+    }
+
     private function rememberEmergency(int|string $chatId, string $message): string
     {
         $state = $this->store->get($chatId);
         $state['phase'] = 'emergency';
         $state['active_domain'] = 'health_herbal';
+        $state['facts']['red_flags'] = $this->normalizeScreeningAnswer($message);
+        $state['missing_fields'] = [];
+        $state['last_decision'] = [
+            'action' => 'block',
+            'category' => $state['facts']['category'] ?? null,
+            'product_code' => null,
+            'safety' => ['outcome' => 'block', 'reason_codes' => ['red_flag_reported']],
+            'decided_at' => now()->toIso8601String(),
+        ];
+        $state['domain_states']['health_herbal'] = [
+            'phase' => 'emergency',
+            'facts' => $state['facts'],
+            'missing_fields' => [],
+            'offered_products' => $state['offered_products'] ?? [],
+        ];
         $this->store->put($chatId, $state);
 
         return $this->remember($chatId, $message, self::EMERGENCY);
@@ -1460,6 +1905,16 @@ class HerbalChatbot
         );
     }
 
+    public function isConsultationOpener(string $message): bool
+    {
+        $normalized = $this->normalizeSocialText($message);
+
+        return (bool) preg_match(
+            '/^(?:(?:apakah|apa|kira kira)\s+)?(?:(?:aku|saya|kami)\s+)?(?:bisa|boleh|mau|ingin|pengen|hendak)\s+(?:mulai\s+|lanjut\s+)?konsul(?:tasi)?(?:\s+(?:dulu|sekarang|nih|dong|ya|kak|min|di sini))?$/u',
+            $normalized,
+        );
+    }
+
     public function isAcknowledgement(string $message): bool
     {
         $normalized = $this->normalizeSocialText($message);
@@ -1469,17 +1924,14 @@ class HerbalChatbot
 
     private function normalizeSocialText(string $message): string
     {
-        $normalized = mb_strtolower($message);
-        $normalized = preg_replace('/[^\pL\pN]+/u', ' ', $normalized) ?? $normalized;
-
-        return trim(preg_replace('/\s+/u', ' ', $normalized) ?? $normalized);
+        return $this->typos->normalize($message);
     }
 
     private function replyCompanyProfile(int|string $chatId, string $message, array $state, ?ParsedMessage $parsed = null): string
     {
         $business = $this->businesses->current();
         if (! $business || ! $this->domainRouter->enabled('company_profile')) {
-            return $this->remember($chatId, $message, self::OFF_TOPIC);
+            return $this->remember($chatId, $message, $this->personaResponses->response(PersonaResponseFactory::OFF_TOPIC));
         }
 
         $plan = $parsed

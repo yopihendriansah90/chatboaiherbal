@@ -7,12 +7,20 @@ use App\Repositories\ProductRepository;
 
 class RenderedResponseValidator
 {
-    public function __construct(private ProductRepository $products) {}
+    public function __construct(
+        private ProductRepository $products,
+        private PersonaConfiguration $personas,
+    ) {}
 
     public function passes(string $text, ResponsePlan $plan): bool
     {
         $text = trim($text);
-        if ($text === '' || str_word_count($text) > (int) config('chatbot.renderer_max_words', 45)) {
+        $personaMaxWords = (int) ($this->personas->current()['max_words'] ?? 80);
+        $maximumWords = min(
+            max(20, $personaMaxWords),
+            max(20, (int) config('chatbot.renderer_max_words', 45)),
+        );
+        if ($text === '' || str_word_count($text) > $maximumWords) {
             return false;
         }
         if (preg_match('/https?:\/\/|www\.|shopee/iu', $text)) {
@@ -42,6 +50,8 @@ class RenderedResponseValidator
             'conditions' => ['penyakit rutin', 'penyakit khusus'],
             'medications' => ['obat rutin', 'obat yang dikonsumsi'],
             'pregnancy' => ['hamil', 'menyusui'],
+            'subject' => ['siapa yang mengalami', 'siapa yang sakit', 'untuk siapa'],
+            'sex' => ['jenis kelamin', 'laki-laki atau perempuan', 'pria atau wanita'],
         ];
         foreach ($knownChecks as $field => $needles) {
             if (empty($plan->knownFacts[$field]) || in_array($field, $plan->missingFields, true)) {

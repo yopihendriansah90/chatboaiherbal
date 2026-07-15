@@ -32,6 +32,27 @@ class ProductRuleEngineTest extends TestCase
         $this->assertNull($product);
     }
 
+    public function test_returns_no_product_for_unsupported_health_complaint(): void
+    {
+        $this->assertNull(app(ProductRuleEngine::class)->recommend('unsupported_health', $this->facts([
+            'complaint' => 'pusing',
+        ])));
+    }
+
+    public function test_medication_blocks_automatic_recommendation_but_allows_one_consultation_option(): void
+    {
+        $facts = $this->facts(['medications' => 'amlodipin']);
+        $rules = app(ProductRuleEngine::class);
+
+        $this->assertNull($rules->recommend('joints', $facts));
+
+        $options = $rules->consultationOptions('joints', $facts, 1);
+        $this->assertCount(1, $options);
+        $this->assertSame('SML', $options[0]['kode']);
+        $this->assertSame('consult', $options[0]['_safety_assessment']['outcome']);
+        $this->assertContains('concurrent_medication', $options[0]['_safety_assessment']['reason_codes']);
+    }
+
     public function test_alternatives_filter_previous_product_and_dosage_form(): void
     {
         $products = app(ProductRuleEngine::class)->alternatives(

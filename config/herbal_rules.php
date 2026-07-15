@@ -19,7 +19,7 @@ return [
         'eye_health' => ['LMT'],
         'hemorrhoid' => ['AMB'],
         'prostate' => ['LYC'],
-        'unsupported_health' => ['KLR'],
+        'unsupported_health' => [],
     ],
     'labels' => [
         'joints' => 'kenyamanan sendi dan pemulihan jaringan',
@@ -39,7 +39,7 @@ return [
         'eye_health' => 'nutrisi dan pemeliharaan kesehatan mata',
         'hemorrhoid' => 'kelancaran BAB dan kenyamanan pada wasir ringan',
         'prostate' => 'antioksidan dan pemeliharaan kesehatan prostat',
-        'unsupported_health' => 'pemenuhan nutrisi agar tubuh tetap sehat dan fit',
+        'unsupported_health' => 'keluhan yang belum memiliki produk dengan klaim aktif yang sesuai',
     ],
     'soft_selling_mechanisms' => [
         'SML' => 'Perpaduan akar kuning, bratawali, dan daun salam digunakan secara tradisional untuk membantu mendukung kenyamanan sendi dan otot.',

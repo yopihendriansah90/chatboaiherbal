@@ -4,11 +4,19 @@ namespace App\Services;
 
 class DomainRouter
 {
-    public function __construct(private BusinessProfileResolver $businesses, private DomainGate $healthGate) {}
+    private IndonesianTypoNormalizer $typos;
+
+    public function __construct(
+        private BusinessProfileResolver $businesses,
+        private DomainGate $healthGate,
+        ?IndonesianTypoNormalizer $typos = null,
+    ) {
+        $this->typos = $typos ?? new IndonesianTypoNormalizer;
+    }
 
     public function local(string $message, array $state = []): ?string
     {
-        $normalized = mb_strtolower($message);
+        $normalized = $this->typos->normalize($message);
         if ($this->isPromptInjection($normalized) || $this->healthGate->isClearlyOffTopic($message)) {
             return 'off_topic';
         }

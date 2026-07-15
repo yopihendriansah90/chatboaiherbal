@@ -34,4 +34,19 @@ class RenderedResponseValidatorTest extends TestCase
         $this->assertFalse($validator->passes('Produk ini dijamin sembuh untuk semua keluhan.', $plan));
         $this->assertFalse($validator->passes('Baik, berapa usia nenek?', $plan));
     }
+
+    public function test_rejects_asking_for_a_subject_that_is_already_known(): void
+    {
+        $plan = new ResponsePlan(
+            action: 'ask_screening',
+            fallbackText: 'Apa keluhan utama ibu kakak?',
+            knownFacts: ['subject' => 'ibu', 'sex' => 'wanita'],
+            missingFields: ['complaint'],
+        );
+
+        $this->assertFalse(app(RenderedResponseValidator::class)->passes(
+            'Boleh tahu siapa yang mengalami keluhan ini?',
+            $plan,
+        ));
+    }
 }

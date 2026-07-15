@@ -5,10 +5,13 @@ namespace App\Filament\Resources\ChatbotContacts;
 use App\Filament\Resources\ChatbotContacts\Pages\ListChatbotContacts;
 use App\Filament\Resources\ChatbotConversations\ChatbotConversationResource;
 use App\Models\ChatbotContact;
+use App\Services\CustomerMemoryService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
@@ -40,6 +43,11 @@ class ChatbotContactResource extends Resource
     public static function canCreate(): bool
     {
         return false;
+    }
+
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->hasRole('agent', 'supervisor', 'analyst') ?? false;
     }
 
     public static function table(Table $table): Table
@@ -80,6 +88,7 @@ class ChatbotContactResource extends Resource
                 TextColumn::make('conversations_count')->label('Percakapan')->numeric()->sortable(),
                 TextColumn::make('messages_count')->label('Pesan')->numeric()->sortable(),
                 TextColumn::make('last_seen_at')->label('Terakhir aktif')->since()->dateTimeTooltip()->sortable(),
+                TextColumn::make('memory_consented_at')->label('Izin memori')->dateTime('d M Y H:i')->placeholder('Belum ada'),
             ])
             ->filters([
                 SelectFilter::make('status')->options([
@@ -157,6 +166,37 @@ class ChatbotContactResource extends Resource
                     ->action(fn (ChatbotContact $record, array $data) => $record->update([
                         'admin_notes' => $data['admin_notes'] ?? null,
                     ])),
+                Action::make('grantMemoryConsent')
+                    ->label('Catat izin memori')
+                    ->icon('heroicon-o-shield-check')
+                    ->requiresConfirmation()
+                    ->modalDescription('Gunakan hanya setelah pelanggan memberikan persetujuan eksplisit untuk menyimpan preferensi lintas percakapan.')
+                    ->visible(fn (ChatbotContact $record): bool => (auth()->user()?->hasRole('agent', 'supervisor') ?? false) && (! $record->memory_consented_at || (bool) $record->memory_consent_revoked_at))
+                    ->action(fn (ChatbotContact $record) => app(CustomerMemoryService::class)->grantConsent($record)),
+                Action::make('revokeMemoryConsent')
+                    ->label('Cabut izin memori')
+                    ->icon('heroicon-o-shield-exclamation')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (ChatbotContact $record): bool => (auth()->user()?->hasRole('agent', 'supervisor') ?? false) && (bool) $record->memory_consented_at && ! $record->memory_consent_revoked_at)
+                    ->action(fn (ChatbotContact $record) => app(CustomerMemoryService::class)->revokeConsent($record)),
+                Action::make('rememberPreference')
+                    ->label('Simpan memori')
+                    ->icon('heroicon-o-bookmark')
+                    ->visible(fn (ChatbotContact $record): bool => (auth()->user()?->hasRole('agent', 'supervisor') ?? false) && (bool) $record->memory_consented_at && ! $record->memory_consent_revoked_at)
+                    ->schema([
+                        Select::make('key')->label('Jenis informasi')->options([
+                            'age_years' => 'Usia aktual (tahun)',
+                            'age_group' => 'Kelompok usia',
+                            'sex' => 'Jenis kelamin',
+                            'allergies' => 'Alergi',
+                            'conditions' => 'Kondisi kesehatan',
+                            'medications' => 'Obat rutin',
+                        ])->required(),
+                        TextInput::make('value')->label('Nilai')->required()->maxLength(500),
+                    ])
+                    ->action(fn (ChatbotContact $record, array $data) => app(CustomerMemoryService::class)
+                        ->remember($record, $data['key'], $data['value'])),
             ]);
     }
 

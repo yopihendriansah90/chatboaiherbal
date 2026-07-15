@@ -17,6 +17,8 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
@@ -40,39 +42,66 @@ class ProductResource extends Resource
 
     protected static ?int $navigationSort = 20;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->hasRole('content_reviewer') ?? false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Identitas produk')->columns(2)->schema([
-                Select::make('business_profile_id')->label('Bisnis')->options(BusinessProfile::query()->pluck('name', 'id'))->required(),
-                TextInput::make('code')->label('Kode')->required()->maxLength(50)->unique(ignoreRecord: true),
-                TextInput::make('name')->label('Nama produk')->required()->maxLength(255),
-                TextInput::make('slug')->required()->maxLength(255)->unique(ignoreRecord: true),
-                Select::make('status')->options(['active' => 'Aktif', 'archived' => 'Diarsipkan'])->required(),
-                Toggle::make('is_active')->label('Dapat direkomendasikan'),
-            ]),
-            Section::make('Informasi tervalidasi')->schema([
-                Textarea::make('short_description')->label('Deskripsi singkat')->rows(3),
-                Textarea::make('full_description')->label('Deskripsi lengkap')->rows(5),
-                TextInput::make('package_content')->label('Isi / kemasan')->maxLength(255),
-                TextInput::make('dosage_form')->label('Bentuk sediaan')->maxLength(80),
-                Textarea::make('usage_instruction')->label('Aturan konsumsi')->rows(4),
-                TextInput::make('manufacturer')->label('Produsen')->maxLength(255),
-                TextInput::make('registration_number')->label('Nomor registrasi')->maxLength(100),
-                TextInput::make('halal_status')->label('Status halal')->maxLength(100),
-                Textarea::make('additional_notes')->label('Catatan tambahan')->rows(4),
-                TextInput::make('source_document')->label('Dokumen sumber')->maxLength(255),
-                TextInput::make('source_page')->label('Halaman sumber')->numeric()->minValue(1),
-            ])->columns(2),
-            Section::make('Stok')
-                ->relationship('inventory')
-                ->description('Jika pelacakan stok dimatikan, chatbot tidak akan menyebut status stok.')
-                ->columns(3)
+            Grid::make()
                 ->schema([
-                    Toggle::make('track_stock')->label('Lacak stok'),
-                    TextInput::make('available_quantity')->label('Stok tersedia')->numeric()->minValue(0)->default(0)->required(),
-                    TextInput::make('reserved_quantity')->label('Stok dipesan')->numeric()->minValue(0)->default(0)->required(),
-                ]),
+                    Group::make([
+                        Section::make('Identitas & status')
+                            ->columns(['default' => 1, 'md' => 2])
+                            ->schema([
+                                Select::make('business_profile_id')->label('Bisnis')->options(BusinessProfile::query()->pluck('name', 'id'))->required(),
+                                TextInput::make('code')->label('Kode')->required()->maxLength(50)->unique(ignoreRecord: true),
+                                TextInput::make('name')->label('Nama produk')->required()->maxLength(255),
+                                TextInput::make('slug')->required()->maxLength(255)->unique(ignoreRecord: true)->readonly()->disabled(),
+                                Select::make('status')->options(['active' => 'Aktif', 'archived' => 'Diarsipkan'])->required(),
+                                Toggle::make('is_active')->label('Dapat direkomendasikan'),
+                            ]),
+                        Section::make('Stok')
+                            ->relationship('inventory')
+                            ->description('Matikan pelacakan jika chatbot tidak boleh menyebut status stok.')
+                            ->columns(['default' => 1, 'md' => 3])
+                            ->schema([
+                                Toggle::make('track_stock')->label('Lacak stok'),
+                                TextInput::make('available_quantity')->label('Tersedia')->numeric()->minValue(0)->default(0)->required(),
+                                TextInput::make('reserved_quantity')->label('Dipesan')->numeric()->minValue(0)->default(0)->required()->lte('available_quantity'),
+                            ]),
+                    ])->columnSpanFull(),
+
+                        // ->columnSpan(['default' => 1, 'xl' => 5]),
+                    Group::make([
+                        Section::make('Deskripsi produk')
+                            ->columns(['default' => 1, 'md' => 2])
+                            ->schema([
+                                Textarea::make('short_description')->label('Deskripsi singkat')->rows(3),
+                                Textarea::make('full_description')->label('Deskripsi lengkap')->rows(3),
+                            ]),
+                        Section::make('Detail produk')
+                            ->columns(['default' => 1, 'md' => 2])
+                            ->schema([
+                                TextInput::make('package_content')->label('Isi / kemasan')->maxLength(255),
+                                TextInput::make('dosage_form')->label('Bentuk sediaan')->maxLength(80),
+                                TextInput::make('manufacturer')->label('Produsen')->maxLength(255),
+                                Textarea::make('usage_instruction')->label('Aturan konsumsi')->rows(2),
+                            ]),
+                        Section::make('Legalitas & sumber')
+                            ->columns(['default' => 1, 'md' => 2])
+                            ->schema([
+                                TextInput::make('registration_number')->label('Nomor registrasi')->maxLength(100),
+                                TextInput::make('halal_status')->label('Status halal')->maxLength(100),
+                                TextInput::make('source_document')->label('Dokumen sumber')->maxLength(255),
+                                TextInput::make('source_page')->label('Halaman sumber')->numeric()->minValue(1),
+                                Textarea::make('additional_notes')->label('Catatan tambahan')->rows(2)->columnSpanFull(),
+                            ]),
+                    ])->columnSpanFull(),
+                        // ->columnSpan(['default' => 1, 'xl' => 7]),
+                ])->columnSpanFull(),
         ]);
     }
 

@@ -1,16 +1,22 @@
 <?php
 
+use App\Jobs\DeliverOutboundMessage;
+use App\Jobs\ProcessChannelEvent;
+use App\Models\ChannelEvent;
 use App\Models\ChatbotChannelIdentity;
 use App\Models\ChatbotContact;
 use App\Models\ChatbotConversation;
 use App\Models\ChatbotMessage;
 use App\Services\BotConfiguration;
+use App\Services\ConversationTrainingDataset;
 use App\Services\CurrencyFreaksService;
 use App\Services\DomainGate;
 use App\Services\ProductRuleEngine;
+use App\Services\RadimaxTrainingEvaluator;
 use App\Services\TelegramClient;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schedule;
 use Symfony\Component\Console\Command\Command;
 
@@ -65,6 +71,32 @@ Artisan::command('chatbot:evaluate', function () {
         ? Command::SUCCESS
         : Command::FAILURE;
 })->purpose('Menjalankan evaluasi deterministik domain dan matriks produk');
+
+Artisan::command('chatbot:evaluate-training', function () {
+    $dataset = app(ConversationTrainingDataset::class);
+    $evaluator = app(RadimaxTrainingEvaluator::class);
+    $documents = $dataset->documents();
+    $scenarios = collect($dataset->scenarios())
+        ->filter(fn (array $scenario): bool => isset($scenario['expected_decision']))
+        ->values();
+    $passed = 0;
+
+    foreach ($scenarios as $scenario) {
+        $actual = $evaluator->evaluate($scenario);
+        $expected = (string) $scenario['expected_decision'];
+        $ok = $actual === $expected;
+        $this->line(($ok ? 'PASS' : 'FAIL')." {$scenario['id']} expected={$expected} actual={$actual}");
+        $passed += $ok ? 1 : 0;
+    }
+
+    $this->newLine();
+    $this->info(count($documents).' dataset valid; '.count($dataset->scenarios()).' total scenarios loaded.');
+    $this->info("{$passed}/{$scenarios->count()} executable training scenarios passed.");
+
+    return $passed === $scenarios->count()
+        ? Command::SUCCESS
+        : Command::FAILURE;
+})->purpose('Memvalidasi dataset pembelajaran dan perilaku Radimax');
 
 Artisan::command('chatbot:purge-history {--days= : Override masa retensi}', function () {
     $days = max(1, (int) ($this->option('days') ?: config('chatbot.history_retention_days', 90)));
@@ -136,3 +168,32 @@ Artisan::command('exchange-rate:sync {--dry-run : Ambil dan validasi tanpa menyi
 
 Schedule::command('chatbot:purge-history')->dailyAt('02:30')->withoutOverlapping();
 Schedule::command('exchange-rate:sync --automatic')->dailyAt('09:00')->withoutOverlapping();
+
+Artisan::command('chatbot:recover-runtime', function () {
+    $events = ChannelEvent::query()
+        ->whereIn('status', ['pending', 'failed'])
+        ->where(fn ($query) => $query->whereNull('available_at')->orWhere('available_at', '<=', now()))
+        ->limit(500)
+        ->pluck('id');
+    foreach ($events as $eventId) {
+        ProcessChannelEvent::dispatch((int) $eventId);
+    }
+
+    $messages = ChatbotMessage::query()
+        ->where('direction', 'outgoing')
+        ->whereIn('delivery_status', ['pending', 'failed'])
+        ->where(fn ($query) => $query->whereNull('next_delivery_attempt_at')->orWhere('next_delivery_attempt_at', '<=', now()))
+        ->limit(500)
+        ->pluck('id');
+    foreach ($messages as $messageId) {
+        DeliverOutboundMessage::dispatch((int) $messageId);
+    }
+
+    $this->info("{$events->count()} event dan {$messages->count()} pesan dijadwalkan ulang.");
+})->purpose('Menjadwalkan ulang event inbound dan delivery yang tertinggal');
+
+Schedule::command('chatbot:recover-runtime')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('horizon:snapshot')->everyFiveMinutes()->withoutOverlapping();
+Schedule::call(fn () => Cache::put('health:scheduler:last_seen', now()->timestamp, now()->addMinutes(10)))
+    ->name('health:scheduler-heartbeat')
+    ->everyMinute();

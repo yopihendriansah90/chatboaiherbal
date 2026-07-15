@@ -50,10 +50,11 @@ PROMPT;
                 'emergency' => ['type' => 'boolean'],
                 'facts' => [
                     'type' => 'object', 'additionalProperties' => false,
-                    'required' => ['subject', 'sex', 'complaint', 'age_group', 'pregnancy', 'allergies', 'conditions', 'medications', 'duration', 'red_flags', 'company_query'],
+                    'required' => ['subject', 'sex', 'complaint', 'age_years', 'age_group', 'pregnancy', 'breastfeeding', 'allergies', 'conditions', 'medications', 'duration', 'red_flags', 'company_query'],
                     'properties' => [
                         'subject' => $nullableString, 'sex' => $nullableString, 'complaint' => $nullableString,
-                        'age_group' => $nullableString, 'pregnancy' => $nullableString, 'allergies' => $nullableString,
+                        'age_years' => ['type' => ['integer', 'null'], 'minimum' => 0, 'maximum' => 120],
+                        'age_group' => $nullableString, 'pregnancy' => $nullableString, 'breastfeeding' => $nullableString, 'allergies' => $nullableString,
                         'conditions' => $nullableString, 'medications' => $nullableString, 'duration' => $nullableString,
                         'red_flags' => $nullableString,
                         'company_query' => $nullableString,

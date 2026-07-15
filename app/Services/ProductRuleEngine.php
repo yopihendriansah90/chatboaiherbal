@@ -10,7 +10,7 @@ use Throwable;
 
 class ProductRuleEngine
 {
-    public function __construct(private ProductRepository $products) {}
+    public function __construct(private ProductRepository $products, private ProductSafetyService $safety) {}
 
     public function recommend(string $category, array $facts): ?array
     {
@@ -24,7 +24,12 @@ class ProductRuleEngine
         array $excludeCodes = [],
         ?string $dosageForm = null,
         int $limit = 1,
+        bool $includeConsultationOptions = false,
     ): array {
+        if ($category === 'unsupported_health') {
+            return [];
+        }
+
         $codes = $this->codesFor($category, $facts);
         $excluded = array_map('strtoupper', $excludeCodes);
         $matches = [];
@@ -36,9 +41,13 @@ class ProductRuleEngine
             if (($product['_stock']['tracked'] ?? false) === true && ($product['_stock']['available'] ?? 0) < 1) {
                 continue;
             }
-            if ($this->isContraindicated($product, $facts) || ! $this->matchesDosageForm($product, $dosageForm)) {
+            $assessment = $this->safety->assess($product, $facts);
+            if ($assessment->preventsInformationalPresentation()
+                || (! $includeConsultationOptions && $assessment->preventsAutomaticRecommendation())
+                || ! $this->matchesDosageForm($product, $dosageForm)) {
                 continue;
             }
+            $product['_safety_assessment'] = $assessment->toArray();
             $matches[] = $product;
             if (count($matches) >= max(1, $limit)) {
                 break;
@@ -46,6 +55,22 @@ class ProductRuleEngine
         }
 
         return $matches;
+    }
+
+    /**
+     * Produk consult hanya boleh ditampilkan sebagai opsi informasi untuk
+     * dibahas dengan dokter/apoteker, bukan sebagai instruksi mulai konsumsi.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function consultationOptions(string $category, array $facts, int $limit = 1): array
+    {
+        return $this->alternatives(
+            category: $category,
+            facts: $facts,
+            limit: $limit,
+            includeConsultationOptions: true,
+        );
     }
 
     public function label(string $category): string
@@ -66,7 +91,7 @@ class ProductRuleEngine
 
     private function codesFor(string $category, array $facts): array
     {
-        $age = (int) filter_var((string) ($facts['age_group'] ?? ''), FILTER_SANITIZE_NUMBER_INT);
+        $age = (int) ($facts['age_years'] ?? filter_var((string) ($facts['age_group'] ?? ''), FILTER_SANITIZE_NUMBER_INT));
         if ($category === 'male_vitality' && $age > 0 && $age < 18) {
             return [];
         }

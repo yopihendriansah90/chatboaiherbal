@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 
 class ChatbotConversation extends Model
@@ -17,14 +18,24 @@ class ChatbotConversation extends Model
         'channel',
         'external_conversation_id',
         'status',
+        'service_status',
+        'bot_mode',
+        'priority',
+        'assigned_to',
         'domain_code',
         'category',
         'product_code',
         'is_emergency',
+        'handoff_reason',
         'message_count',
         'started_at',
         'last_message_at',
+        'waiting_since',
+        'sla_due_at',
         'closed_at',
+        'resolved_at',
+        'resolution_code',
+        'tags',
     ];
 
     protected static function booted(): void
@@ -42,6 +53,10 @@ class ChatbotConversation extends Model
             'started_at' => 'datetime',
             'last_message_at' => 'datetime',
             'closed_at' => 'datetime',
+            'waiting_since' => 'datetime',
+            'sla_due_at' => 'datetime',
+            'resolved_at' => 'datetime',
+            'tags' => 'array',
         ];
     }
 
@@ -63,5 +78,35 @@ class ChatbotConversation extends Model
     public function messages(): HasMany
     {
         return $this->hasMany(ChatbotMessage::class)->orderBy('id');
+    }
+
+    public function state(): HasOne
+    {
+        return $this->hasOne(ChatbotConversationState::class);
+    }
+
+    public function assignee(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function notes(): HasMany
+    {
+        return $this->hasMany(ConversationNote::class);
+    }
+
+    public function events(): HasMany
+    {
+        return $this->hasMany(ConversationEvent::class);
+    }
+
+    public function consultationCases(): HasMany
+    {
+        return $this->hasMany(ConsultationCase::class);
+    }
+
+    public function latestConsultation(): HasOne
+    {
+        return $this->hasOne(ConsultationCase::class)->latestOfMany();
     }
 }

@@ -38,6 +38,11 @@ class BotSettings extends Page
     /** @var array<string, mixed> */
     public array $data = [];
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+
     public function mount(BotConfiguration $configuration): void
     {
         $this->form->fill($configuration->formData());
@@ -81,12 +86,23 @@ class BotSettings extends Page
                                             ->revealable()
                                             ->autocomplete('new-password')
                                             ->placeholder(fn (): string => filled(config('services.telegram.webhook_secret')) ? 'Secret sudah tersimpan' : 'Gunakan nilai acak')
-                                            ->rules(['nullable', 'regex:/^[A-Za-z0-9_-]+$/', 'max:256']),
+                                            ->rules(['nullable', 'regex:/^[A-Za-z0-9_-]+$/', 'max:256'])
+                                            ->validationMessages([
+                                                'regex' => 'Webhook secret hanya boleh berisi huruf, angka, tanda hubung (-), dan garis bawah (_).',
+                                                'max' => 'Webhook secret terlalu panjang. Gunakan maksimal 256 karakter ya.',
+                                            ]),
                                         TextInput::make('telegram_webhook_url')
                                             ->label('Webhook URL')
                                             ->url()
                                             ->rules(['nullable', 'starts_with:https://'])
                                             ->placeholder('https://domain.example/api/telegram/webhook')
+                                            ->helperText('Gunakan alamat HTTPS lengkap yang menuju ke /api/telegram/webhook.')
+                                            ->mutateStateForValidationUsing(fn (?string $state): ?string => filled($state) ? trim($state) : null)
+                                            ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? trim($state) : null)
+                                            ->validationMessages([
+                                                'url' => 'Alamat webhook belum sesuai. Masukkan URL lengkap, contohnya https://domain.example/api/telegram/webhook.',
+                                                'starts_with' => 'Webhook Telegram harus memakai HTTPS agar koneksinya aman.',
+                                            ])
                                             ->columnSpanFull(),
                                         TextInput::make('telegram_timeout')
                                             ->label('Timeout Telegram')
@@ -94,7 +110,13 @@ class BotSettings extends Page
                                             ->suffix('detik')
                                             ->required()
                                             ->minValue(3)
-                                            ->maxValue(60),
+                                            ->maxValue(60)
+                                            ->validationMessages([
+                                                'required' => 'Waktu tunggu Telegram perlu diisi terlebih dahulu.',
+                                                'numeric' => 'Waktu tunggu Telegram harus berupa angka.',
+                                                'min' => 'Waktu tunggu Telegram minimal 3 detik ya.',
+                                                'max' => 'Waktu tunggu Telegram maksimal 60 detik ya.',
+                                            ]),
                                     ]),
                             ]),
                         Tab::make('Strategi AI')

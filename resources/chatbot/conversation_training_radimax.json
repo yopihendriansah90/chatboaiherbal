@@ -1,0 +1,305 @@
+{
+  "dataset_name": "konsultasi_radimax_soft_selling",
+  "version": "1.0.0",
+  "locale": "id-ID",
+  "description": "Contoh percakapan konsultasi pria dewasa sampai soft-selling Kopi Radimax dengan screening keamanan.",
+  "product_reference": {
+    "code": "RAD",
+    "name": "Kopi Radimax",
+    "form": "Serbuk minuman",
+    "package": "10 sachet, 25 gram per sachet",
+    "approved_benefit": "membantu mendukung stamina dan vitalitas pria dewasa",
+    "ingredients": [
+      "Ekstrak akar pasak bumi",
+      "Ekstrak jahe merah",
+      "Susu kambing",
+      "Kedelai"
+    ],
+    "registration_number": "BPOM TR 193228081",
+    "halal_status": "Halal MUI",
+    "minimum_age": 18,
+    "subject_type": "adult_male",
+    "safety_rules": [
+      {
+        "code": "milk_lactose",
+        "outcome": "block",
+        "condition": "Alergi susu",
+        "guidance": "Hindari produk bila pengguna memiliki alergi susu."
+      },
+      {
+        "code": "soy",
+        "outcome": "block",
+        "condition": "Alergi kedelai",
+        "guidance": "Hindari produk bila pengguna memiliki alergi kedelai."
+      },
+      {
+        "code": "gastric",
+        "outcome": "caution",
+        "condition": "Lambung sensitif atau GERD aktif",
+        "guidance": "Jahe dan kopi dapat terasa kurang nyaman pada lambung sensitif."
+      },
+      {
+        "code": "concurrent_medication",
+        "outcome": "consult",
+        "condition": "Sedang menggunakan obat rutin",
+        "guidance": "Konfirmasikan kombinasi produk dengan dokter atau apoteker sebelum mulai dikonsumsi."
+      }
+    ]
+  },
+  "global_response_rules": {
+    "tone": [
+      "ramah",
+      "empatik",
+      "tidak menghakimi",
+      "menggunakan bahasa Indonesia percakapan"
+    ],
+    "required": [
+      "Pertahankan siapa subjek konsultasi sepanjang percakapan.",
+      "Selesaikan screening usia, alergi, kondisi, dan obat rutin sebelum rekomendasi.",
+      "Gunakan klaim manfaat yang telah disetujui dalam katalog.",
+      "Posisikan produk sebagai pendamping, bukan pengganti pemeriksaan atau terapi medis.",
+      "Jika ada obat rutin, jangan menyuruh pengguna menghentikan atau mengubah obat dokter."
+    ],
+    "forbidden": [
+      "Menjamin produk menyembuhkan ejakulasi dini.",
+      "Menjamin produk mengatasi disfungsi ereksi.",
+      "Memberikan rekomendasi kepada pengguna berusia di bawah 18 tahun.",
+      "Merekomendasikan produk bila terdapat alergi susu atau kedelai.",
+      "Mengarang harga, stok, tautan, legalitas, komposisi, atau manfaat.",
+      "Memberikan dosis atau ajakan membeli pada outcome consult sebelum persetujuan dokter atau apoteker."
+    ]
+  },
+  "scenarios": [
+    {
+      "id": "radimax_allow_001",
+      "title": "Pria dewasa tanpa alergi, penyakit, atau obat rutin",
+      "expected_outcome": "allow",
+      "expected_product_code": "RAD",
+      "turns": [
+        {
+          "turn": 1,
+          "role": "user",
+          "content": "Halo min, mau konsultasi dong.",
+          "intent": "start_consultation"
+        },
+        {
+          "turn": 2,
+          "role": "assistant",
+          "content": "Halo kak 😊 Tentu boleh. Ceritakan saja dengan santai, konsultasinya untuk kakak sendiri atau orang lain?",
+          "response_goal": "identify_subject",
+          "expected_missing_fields": [
+            "subject",
+            "complaint"
+          ]
+        },
+        {
+          "turn": 3,
+          "role": "user",
+          "content": "Buat saya sendiri min, saya pria.",
+          "extracted_facts": {
+            "subject": "diri sendiri",
+            "sex": "pria"
+          }
+        },
+        {
+          "turn": 4,
+          "role": "assistant",
+          "content": "Baik kak, aku bantu pelan-pelan ya. Keluhan utama yang sedang kakak rasakan apa?",
+          "response_goal": "identify_complaint",
+          "expected_missing_fields": [
+            "complaint"
+          ]
+        },
+        {
+          "turn": 5,
+          "role": "user",
+          "content": "Kalau berhubungan kok cepat keluar dan stamina juga gampang turun ya.",
+          "extracted_facts": {
+            "complaint": "ejakulasi terasa terlalu cepat dan stamina menurun saat berhubungan",
+            "category": "male_vitality"
+          }
+        },
+        {
+          "turn": 6,
+          "role": "assistant",
+          "content": "Aku mengerti, kak. Keluhan seperti itu memang bisa membuat kurang nyaman dan memengaruhi rasa percaya diri. Keluhannya sudah dirasakan sejak kapan?",
+          "response_goal": "collect_duration",
+          "expected_missing_fields": [
+            "duration"
+          ]
+        },
+        {
+          "turn": 7,
+          "role": "user",
+          "content": "Sekitar 3 bulanan.",
+          "extracted_facts": {
+            "duration": "sekitar 3 bulan"
+          }
+        },
+        {
+          "turn": 8,
+          "role": "assistant",
+          "content": "Baik, aku catat sudah sekitar 3 bulan ya. Keluhannya terjadi hampir setiap kali berhubungan atau hanya sesekali, kak?",
+          "response_goal": "collect_frequency",
+          "expected_missing_fields": [
+            "frequency"
+          ]
+        },
+        {
+          "turn": 9,
+          "role": "user",
+          "content": "Hampir setiap kali min.",
+          "extracted_facts": {
+            "frequency": "hampir setiap kali berhubungan"
+          }
+        },
+        {
+          "turn": 10,
+          "role": "assistant",
+          "content": "Baik kak. Boleh tahu usia kakak?",
+          "response_goal": "collect_age",
+          "expected_missing_fields": [
+            "age_years"
+          ]
+        },
+        {
+          "turn": 11,
+          "role": "user",
+          "content": "36 tahun.",
+          "extracted_facts": {
+            "age_years": 36,
+            "age_group": "36 tahun"
+          }
+        },
+        {
+          "turn": 12,
+          "role": "assistant",
+          "content": "Terima kasih, kak. Sebelum aku mencarikan produk pendamping, apakah kakak memiliki alergi susu atau kedelai, lambung sensitif atau GERD, penyakit tertentu, atau sedang minum obat rutin?",
+          "response_goal": "safety_screening",
+          "expected_missing_fields": [
+            "allergies",
+            "conditions",
+            "medications"
+          ]
+        },
+        {
+          "turn": 13,
+          "role": "user",
+          "content": "Nggak ada alergi, nggak punya penyakit, dan nggak minum obat rutin.",
+          "extracted_facts": {
+            "allergies": "tidak ada",
+            "conditions": "tidak ada",
+            "medications": "tidak ada"
+          }
+        },
+        {
+          "turn": 14,
+          "role": "assistant",
+          "content": "Baik kak, terima kasih sudah menjelaskan 😊 Berdasarkan informasi yang kakak berikan, ada herbal pendamping yang dapat dipertimbangkan untuk membantu mendukung stamina dan vitalitas pria dewasa.\n\n🌿 Kopi Radimax\n\nKopi herbal pria dengan kandungan pasak bumi dan jahe merah. Susu kambing dan kedelai melengkapi asupan energi serta protein.\n\nManfaat yang tercatat adalah membantu mendukung stamina dan vitalitas pria dewasa. Produk ini bukan jaminan mengobati ejakulasi dini, tetapi dapat dipertimbangkan sebagai pendamping bersama pola tidur, aktivitas fisik, dan pengelolaan stres yang baik.\n\nKomposisi utama: Ekstrak akar pasak bumi, Ekstrak jahe merah, Susu kambing, dan Kedelai.\n\nLegalitas: BPOM TR 193228081 • Halal MUI.",
+          "response_goal": "safe_soft_selling",
+          "decision": {
+            "action": "recommend",
+            "safety_outcome": "allow",
+            "product_code": "RAD"
+          }
+        },
+        {
+          "turn": 15,
+          "role": "user",
+          "content": "Cara minumnya gimana min?",
+          "intent": "ask_product_usage"
+        },
+        {
+          "turn": 16,
+          "role": "assistant",
+          "content": "Aturan pakai yang tercatat pada katalog adalah 1 sachet, 2 kali sehari setelah makan, atau sekitar 2 jam sebelum aktivitas bersama pasangan, sesuai petunjuk pada label. Karena mengandung kopi dan jahe merah, perhatikan reaksi tubuh, terutama jika lambung mudah terasa tidak nyaman ya, kak.",
+          "response_goal": "provide_catalog_usage"
+        },
+        {
+          "turn": 17,
+          "role": "user",
+          "content": "Harganya berapa?",
+          "intent": "ask_active_price"
+        },
+        {
+          "turn": 18,
+          "role": "assistant",
+          "content_template": "Harga aktif Kopi Radimax saat ini {{active_price}}, kak. Kalau kakak ingin, aku juga bisa membantu menjelaskan isi kemasan dan proses pemesanannya 😊",
+          "fallback_content": "Maaf kak, harga aktif Kopi Radimax belum tersedia di sistem.",
+          "response_goal": "provide_database_price",
+          "data_requirements": [
+            "Harga harus berasal dari product_prices yang aktif dan masih berlaku.",
+            "Jangan mengganti placeholder dengan harga buatan."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "radimax_consult_medication_001",
+      "title": "Pria dewasa sedang menggunakan amlodipin",
+      "expected_outcome": "consult",
+      "expected_product_code": "RAD",
+      "preconditions": {
+        "subject": "diri sendiri",
+        "sex": "pria",
+        "age_years": 36,
+        "complaint": "ejakulasi terasa terlalu cepat dan stamina menurun saat berhubungan",
+        "category": "male_vitality",
+        "duration": "sekitar 3 bulan",
+        "frequency": "hampir setiap kali berhubungan",
+        "allergies": "tidak ada",
+        "conditions": "darah tinggi"
+      },
+      "turns": [
+        {
+          "turn": 1,
+          "role": "assistant",
+          "content": "Apakah kakak sedang minum obat rutin?",
+          "response_goal": "collect_medication"
+        },
+        {
+          "turn": 2,
+          "role": "user",
+          "content": "Saya minum amlodifin setiap hari.",
+          "extracted_facts": {
+            "medications": "amlodipin",
+            "medication_reported": "amlodifin",
+            "medication_was_corrected": true
+          }
+        },
+        {
+          "turn": 3,
+          "role": "assistant",
+          "content": "Baik kak, aku catat nama obat yang disebut “amlodifin” — kemungkinan maksudnya amlodipin; mohon koreksi kalau berbeda. Jangan menghentikan atau mengubah obat dari dokter ya.\n\nAku tetap bisa menunjukkan satu opsi pendamping yang relevan untuk dibicarakan terlebih dahulu dengan dokter atau apoteker.\n\n🌿 Opsi pendamping untuk dikonsultasikan: Kopi Radimax\nManfaat yang tercatat: membantu mendukung stamina dan vitalitas pria dewasa.\nKomposisi utama: Ekstrak akar pasak bumi, Ekstrak jahe merah, Susu kambing, dan Kedelai.\nLegalitas: BPOM TR 193228081 • Halal MUI.\n\nBelum untuk langsung diminum ya, kak. Tunjukkan nama produk, komposisi, kondisi darah tinggi, dan obat rutin kepada dokter atau apoteker. Jika dinyatakan boleh, aku bisa membantu menjelaskan aturan pakai, harga, dan cara pemesanannya.",
+          "response_goal": "consultative_soft_selling",
+          "decision": {
+            "action": "consult",
+            "safety_outcome": "consult",
+            "reason_codes": [
+              "concurrent_medication"
+            ],
+            "product_code": "RAD"
+          },
+          "forbidden_in_response": [
+            "Instruksi untuk mulai minum sekarang",
+            "Dosis pemakaian sebelum persetujuan dokter atau apoteker",
+            "Tautan pembelian",
+            "Instruksi menghentikan amlodipin"
+          ]
+        },
+        {
+          "turn": 4,
+          "role": "user",
+          "content": "Jadi saya nggak boleh minum herbal?",
+          "intent": "clarify_safety_decision"
+        },
+        {
+          "turn": 5,
+          "role": "assistant",
+          "content": "Bukan berarti pasti tidak boleh, kak. Karena ada obat dokter yang rutin digunakan, kecocokan komposisi dan waktu konsumsinya perlu dikonfirmasi dahulu kepada dokter atau apoteker. Jangan hentikan atau mengubah obat dokter. Opsi yang tadi aku tampilkan tetap bisa dibawa sebagai bahan diskusi.",
+          "response_goal": "explain_consult_outcome"
+        }
+      ]
+    }
+  ]
+}

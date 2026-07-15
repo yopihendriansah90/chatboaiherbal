@@ -4,6 +4,11 @@ namespace App\Services;
 
 class SexualHealthNormalizer
 {
+    public function __construct(private ?IndonesianTypoNormalizer $typos = null)
+    {
+        $this->typos ??= new IndonesianTypoNormalizer;
+    }
+
     public function analyze(string $message, array $currentFacts = []): array
     {
         $text = $this->normalize($message);
@@ -37,6 +42,7 @@ class SexualHealthNormalizer
             '/\b(?:stamina|vitalitas|kejantanan)\s+(?:pria|lelaki|cowok|ranjang|seksual)?\s*(?:turun|lemah|kurang)?\b/u',
             '/\b(?:cepat|cepet)\s+(?:capek|lelah|loyo)\s+(?:saat|pas|ketika)\s+(?:berhubungan|seks|ngewe|ngentot)\b/u',
             '/\b(?:loyo|letoy)\s+(?:saat|pas|ketika)\s+(?:berhubungan|seks|ngewe|ngentot|di\s+ranjang)\b/u',
+            '/\b(?:kontol|penis|titit|burung|alat\s+vital)?\s*(?:gue|saya|aku)?\s*(?:suka\s+)?(?:loyo|letoy)\s+(?:saat|pas|ketika)\s+(?:mau\s+)?(?:berhubungan|seks|ngewe|ngentot)\b/u',
             '/\b(?:cuma|hanya)\s+(?:kuat|tahan)\s+(?:sebentar|sebentar\s+banget|\d+\s*menit)\b/u',
             '/\b(?:ga|gak|nggak|tidak)\s+kuat\s+(?:main|berhubungan)\s+lama\b/u',
             '/\bdurasi(?:nya)?\s+(?:pendek|sebentar|kurang)\b/u',
@@ -77,10 +83,7 @@ class SexualHealthNormalizer
 
     private function normalize(string $message): string
     {
-        $text = mb_strtolower($message);
-        $text = preg_replace('/[^\pL\pN]+/u', ' ', $text) ?? $text;
-
-        return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+        return $this->typos->normalize($message);
     }
 
     private function isShortFollowup(string $text): bool

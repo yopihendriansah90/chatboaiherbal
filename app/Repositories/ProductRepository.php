@@ -260,9 +260,17 @@ class ProductRepository
                 ->with([
                     'ingredients',
                     'links' => fn ($query) => $query->where('is_active', true)->orderByDesc('is_primary'),
-                    'claims' => fn ($query) => $query->where('is_active', true)->where('approval_status', 'approved'),
+                    'claims' => fn ($query) => $query
+                        ->where('is_active', true)
+                        ->where('approval_status', 'approved')
+                        ->where(fn ($query) => $query->whereNull('effective_from')->orWhere('effective_from', '<=', now()))
+                        ->where(fn ($query) => $query->whereNull('effective_until')->orWhere('effective_until', '>', now())),
                     'contraindications' => fn ($query) => $query->where('is_active', true),
-                    'prices' => fn ($query) => $query->where('is_active', true)->latest('effective_from'),
+                    'prices' => fn ($query) => $query
+                        ->where('is_active', true)
+                        ->where(fn ($query) => $query->whereNull('effective_from')->orWhere('effective_from', '<=', now()))
+                        ->where(fn ($query) => $query->whereNull('effective_until')->orWhere('effective_until', '>', now()))
+                        ->latest('effective_from'),
                     'inventory',
                 ])
                 ->orderBy('id')

@@ -3,10 +3,18 @@
 namespace App\Services;
 
 use App\Models\AiProvider;
+use App\Models\AiUsageRecord;
+use App\Models\ChannelEvent;
+use App\Models\ChatbotConversation;
+use App\Models\ChatbotMessage;
 use App\Repositories\ProductRepository;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redis;
+use Illuminate\Support\Facades\Schema;
+use Laravel\Horizon\Horizon;
 use Throwable;
 
 class SystemHealthReport
@@ -21,15 +29,27 @@ class SystemHealthReport
     {
         $catalog = $this->catalog();
         $checks = [
+            'database' => $this->databaseCheck(),
             'cache' => $this->cacheCheck(),
+            'redis' => $this->redisCheck(),
+            'horizon' => $this->horizonCheck(),
+            'worker' => $this->horizonCheck(),
+            'scheduler' => $this->schedulerCheck(),
             'catalog' => $catalog['status'],
             'telegram' => $this->telegramConfigured() ? 'ok' : 'failed',
+            'webhook' => $this->telegramConfigured() ? 'ok' : 'failed',
             'parser' => $this->parserConfigured() ? 'ok' : 'failed',
+            'provider' => $this->parserConfigured() ? 'ok' : 'failed',
             'renderer' => $this->rendererStatus(),
             'storage' => is_writable(storage_path()) ? 'ok' : 'failed',
             'logging' => is_writable(storage_path('logs')) ? 'ok' : 'failed',
         ];
-        $requiredFailed = in_array('failed', Arr::only($checks, ['cache', 'catalog', 'telegram', 'parser', 'storage', 'logging']), true);
+        $required = ['database', 'cache', 'catalog', 'telegram', 'parser', 'storage', 'logging'];
+        if (config('queue.default') === 'redis') {
+            $required[] = 'redis';
+            $required[] = 'horizon';
+        }
+        $requiredFailed = in_array('failed', Arr::only($checks, $required), true);
         $status = $requiredFailed ? 'down' : ($checks['renderer'] === 'degraded' ? 'degraded' : 'ok');
 
         return [
@@ -72,9 +92,10 @@ class SystemHealthReport
             ],
             'conversation' => [
                 'cache_store' => config('cache.default'),
-                'state_version' => 'v3',
+                'state_version' => 'v5-durable',
                 'memory_ttl_hours' => (int) config('chatbot.memory_ttl_hours'),
                 'history_limit' => (int) config('chatbot.history_limit'),
+                'runtime' => $this->runtimeCounts(),
             ],
             'configuration' => [
                 'source' => $this->botConfiguration->current()?->is_active ? 'database' : 'environment',
@@ -96,6 +117,81 @@ class SystemHealthReport
             return $healthy ? 'ok' : 'failed';
         } catch (Throwable) {
             return 'failed';
+        }
+    }
+
+    private function databaseCheck(): string
+    {
+        try {
+            DB::select('select 1');
+
+            return 'ok';
+        } catch (Throwable) {
+            return 'failed';
+        }
+    }
+
+    private function redisCheck(): string
+    {
+        if (config('queue.default') !== 'redis' && config('cache.default') !== 'redis') {
+            return 'disabled';
+        }
+        try {
+            return Redis::connection()->ping() ? 'ok' : 'failed';
+        } catch (Throwable) {
+            return 'failed';
+        }
+    }
+
+    private function horizonCheck(): string
+    {
+        if (config('queue.default') !== 'redis') {
+            return 'disabled';
+        }
+        try {
+            return Horizon::status() === 'running' ? 'ok' : 'failed';
+        } catch (Throwable) {
+            return 'failed';
+        }
+    }
+
+    private function schedulerCheck(): string
+    {
+        try {
+            $lastSeen = (int) Cache::get('health:scheduler:last_seen', 0);
+
+            return $lastSeen > 0 && (time() - $lastSeen) <= 180 ? 'ok' : 'unknown';
+        } catch (Throwable) {
+            return 'failed';
+        }
+    }
+
+    private function runtimeCounts(): array
+    {
+        try {
+            $events = Schema::hasTable('channel_events')
+                ? ChannelEvent::query()->whereNotNull('processed_at')->latest('id')->limit(1000)->get(['created_at', 'processed_at'])
+                : collect();
+            $deliveries = Schema::hasTable('chatbot_messages')
+                ? ChatbotMessage::query()->where('direction', 'outgoing')->whereNotNull('delivered_at')->latest('id')->limit(1000)->get(['occurred_at', 'delivered_at'])
+                : collect();
+
+            return [
+                'pending_events' => Schema::hasTable('channel_events') ? ChannelEvent::query()->whereIn('status', ['pending', 'failed'])->count() : 0,
+                'dead_events' => Schema::hasTable('channel_events') ? ChannelEvent::query()->where('status', 'dead')->count() : 0,
+                'pending_deliveries' => Schema::hasTable('chatbot_messages') ? ChatbotMessage::query()->where('direction', 'outgoing')->whereIn('delivery_status', ['pending', 'failed'])->count() : 0,
+                'dead_deliveries' => Schema::hasTable('chatbot_messages') ? ChatbotMessage::query()->where('delivery_status', 'dead')->count() : 0,
+                'average_inbound_latency_ms' => $events->isEmpty() ? null : (int) round($events->avg(fn (ChannelEvent $event) => $event->created_at->diffInMilliseconds($event->processed_at))),
+                'average_delivery_latency_ms' => $deliveries->isEmpty() ? null : (int) round($deliveries->avg(fn (ChatbotMessage $message) => $message->occurred_at->diffInMilliseconds($message->delivered_at))),
+                'average_ai_latency_ms' => Schema::hasTable('ai_usage_records') ? (int) round((float) AiUsageRecord::query()->whereNotNull('latency_ms')->avg('latency_ms')) : null,
+                'ai_cost_idr' => Schema::hasTable('ai_usage_records') ? round((float) AiUsageRecord::query()->sum('total_cost_idr'), 2) : null,
+                'ai_fallback_attempts' => Schema::hasTable('ai_usage_records') ? AiUsageRecord::query()->where('attempt', '>', 1)->count() : 0,
+                'handoff_waiting' => Schema::hasTable('chatbot_conversations') ? ChatbotConversation::query()->where('service_status', 'waiting_agent')->count() : 0,
+                'sla_breached' => Schema::hasTable('chatbot_conversations') ? ChatbotConversation::query()->whereNotIn('service_status', ['resolved'])->where('sla_due_at', '<', now())->count() : 0,
+                'feedback_average' => Schema::hasTable('conversation_feedback') ? round((float) DB::table('conversation_feedback')->whereNotNull('rating')->avg('rating'), 2) : null,
+            ];
+        } catch (Throwable) {
+            return ['pending_events' => null, 'dead_events' => null, 'pending_deliveries' => null, 'dead_deliveries' => null];
         }
     }
 
@@ -157,26 +253,52 @@ class SystemHealthReport
 
     private function recentFailures(): array
     {
-        $path = storage_path('logs/laravel.log');
-        if (! is_readable($path)) {
+        try {
+            $limit = (int) config('health.recent_failures_limit', 10);
+            $failures = collect();
+
+            if (Schema::hasTable('channel_events')) {
+                $failures->push(...ChannelEvent::query()->whereIn('status', ['failed', 'dead'])
+                    ->latest('failed_at')->limit($limit)->get()
+                    ->map(fn (ChannelEvent $event): array => [
+                        'timestamp' => $event->failed_at?->toIso8601String(),
+                        'level' => $event->status === 'dead' ? 'error' : 'warning',
+                        'event' => 'Inbound '.$event->status,
+                        'provider' => $event->channel,
+                        'error_code' => $event->error_code,
+                        'attempt' => $event->attempt_count,
+                    ]));
+            }
+            if (Schema::hasTable('chatbot_messages')) {
+                $failures->push(...ChatbotMessage::query()->where('direction', 'outgoing')
+                    ->whereIn('delivery_status', ['failed', 'dead'])->latest('failed_at')->limit($limit)->get()
+                    ->map(fn (ChatbotMessage $message): array => [
+                        'timestamp' => $message->failed_at?->toIso8601String(),
+                        'level' => $message->delivery_status === 'dead' ? 'error' : 'warning',
+                        'event' => 'Outbound '.$message->delivery_status,
+                        'error_code' => $message->error_code,
+                        'attempt' => $message->delivery_attempt_count,
+                    ]));
+            }
+            if (Schema::hasTable('ai_usage_records')) {
+                $failures->push(...AiUsageRecord::query()->where('successful', false)
+                    ->latest('occurred_at')->limit($limit)->get()
+                    ->map(fn (AiUsageRecord $usage): array => [
+                        'timestamp' => $usage->occurred_at?->toIso8601String(),
+                        'level' => 'warning',
+                        'event' => 'AI request failed',
+                        'provider' => $usage->provider,
+                        'model' => $usage->model,
+                        'error_code' => $usage->error_code,
+                        'status' => $usage->status_code,
+                        'attempt' => $usage->attempt,
+                        'latency_ms' => $usage->latency_ms,
+                    ]));
+            }
+
+            return $failures->sortByDesc('timestamp')->take($limit)->values()->all();
+        } catch (Throwable) {
             return [];
         }
-
-        $events = [];
-        $lines = array_slice(file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [], -400);
-        foreach ($lines as $line) {
-            if (! preg_match('/^\[([^]]+)]\s+\w+\.(WARNING|ERROR|NOTICE):\s+(Groq request failed|Gemini request failed|Natural renderer fallback|Switching AI parser provider)\s+(\{.*})$/', $line, $matches)) {
-                continue;
-            }
-            $context = json_decode($matches[4], true) ?: [];
-            $events[] = array_merge([
-                'timestamp' => $matches[1], 'level' => strtolower($matches[2]), 'event' => $matches[3],
-            ], Arr::only($context, [
-                'attempt', 'status', 'api_code', 'action', 'provider', 'model', 'latency_ms',
-                'validator_passed', 'fallback_reason', 'product_code',
-            ]));
-        }
-
-        return array_slice(array_reverse($events), 0, (int) config('health.recent_failures_limit', 10));
     }
 }

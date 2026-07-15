@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\BusinessProfile;
+use App\Models\ChatbotPersona;
 use App\Models\CompanyProfile;
 use Illuminate\Database\Seeder;
 
@@ -25,6 +26,19 @@ class BusinessProfileSeeder extends Seeder
         CompanyProfile::query()->firstOrCreate(
             ['business_profile_id' => $business->id],
             ['legal_name' => 'Walatra Herbal', 'short_description' => 'Perusahaan produk herbal dan layanan informasi herbal.'],
+        );
+
+        ChatbotPersona::query()->firstOrCreate(
+            ['business_profile_id' => $business->id],
+            [
+                'name' => 'Asisten Herbal Walatra',
+                'formality' => 'friendly',
+                'empathy_style' => 'brief_relevant',
+                'emoji_policy' => 'minimal',
+                'max_words' => 80,
+                'tone_rules' => ['Gunakan sapaan kak', 'Jujur bila informasi belum tersedia', 'Jangan menggurui'],
+                'is_active' => true,
+            ],
         );
     }
 }

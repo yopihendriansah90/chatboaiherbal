@@ -13,6 +13,10 @@ readonly class ResponsePlan
         public ?array $product = null,
         public string $domain = 'health_herbal',
         public ?array $companyInformation = null,
+        public ?string $goal = null,
+        public ?string $emotion = null,
+        public string $empathyLevel = 'brief',
+        public array $forbiddenContent = [],
     ) {}
 
     public function rendererPayload(): array
@@ -27,6 +31,10 @@ readonly class ResponsePlan
                 'benefit' => $this->product['benefit'] ?? null,
             ] : null,
             'company_information' => $this->companyInformation,
+            'response_goal' => $this->goal ?? $this->action,
+            'detected_emotion' => $this->emotion,
+            'empathy_level' => $this->empathyLevel,
+            'forbidden_content' => $this->forbiddenContent,
             'constraints' => [
                 'language' => 'Bahasa Indonesia',
                 'tone' => 'hangat, natural, singkat, mudah dipahami dewasa dan lansia',

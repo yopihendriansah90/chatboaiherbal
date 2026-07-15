@@ -15,18 +15,7 @@ use Tests\TestCase;
 
 class CurrencyFreaksServiceTest extends TestCase
 {
-    use RefreshDatabase {
-        refreshDatabase as performRefreshDatabase;
-    }
-
-    public function refreshDatabase(): void
-    {
-        if (! extension_loaded('pdo_sqlite')) {
-            $this->markTestSkipped('Ekstensi pdo_sqlite diperlukan untuk pengujian database in-memory.');
-        }
-
-        $this->performRefreshDatabase();
-    }
+    use RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -63,7 +52,7 @@ class CurrencyFreaksServiceTest extends TestCase
         $this->assertSame($admin->id, $created->updated_by);
         $this->assertDatabaseHas('exchange_rates', ['id' => $previous->id, 'rate' => 18000]);
         $this->assertDatabaseCount('exchange_rates', 2);
-        Http::assertSent(fn ($request): bool => $request->url() === CurrencyFreaksService::ENDPOINT
+        Http::assertSent(fn ($request): bool => str_starts_with($request->url(), CurrencyFreaksService::ENDPOINT)
             && $request['apikey'] === 'secret-key'
             && ! isset($request['symbols']));
     }

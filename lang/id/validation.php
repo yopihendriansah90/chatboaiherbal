@@ -1,0 +1,47 @@
+<?php
+
+return [
+    'accepted' => ':attribute perlu disetujui terlebih dahulu.',
+    'array' => ':attribute harus berupa daftar yang valid.',
+    'boolean' => 'Pilihan :attribute belum valid.',
+    'confirmed' => 'Konfirmasi :attribute belum sama.',
+    'date' => ':attribute belum menggunakan format tanggal yang valid.',
+    'date_format' => ':attribute perlu mengikuti format :format.',
+    'decimal' => ':attribute harus memiliki :decimal angka di belakang koma.',
+    'email' => 'Alamat email yang dimasukkan belum valid.',
+    'exists' => ':attribute yang dipilih tidak tersedia.',
+    'file' => ':attribute harus berupa berkas yang valid.',
+    'image' => ':attribute harus berupa gambar.',
+    'in' => 'Pilihan :attribute tidak tersedia.',
+    'integer' => ':attribute harus berupa bilangan bulat.',
+    'max' => [
+        'array' => ':attribute maksimal berisi :max item.',
+        'file' => 'Ukuran :attribute maksimal :max kilobita.',
+        'numeric' => 'Nilai :attribute maksimal :max.',
+        'string' => ':attribute maksimal terdiri dari :max karakter.',
+    ],
+    'min' => [
+        'array' => ':attribute minimal berisi :min item.',
+        'file' => 'Ukuran :attribute minimal :min kilobita.',
+        'numeric' => 'Nilai :attribute minimal :min.',
+        'string' => ':attribute minimal terdiri dari :min karakter.',
+    ],
+    'not_in' => 'Pilihan :attribute belum dapat digunakan.',
+    'numeric' => ':attribute harus berupa angka.',
+    'regex' => 'Format :attribute belum sesuai.',
+    'required' => ':attribute perlu diisi terlebih dahulu.',
+    'required_if' => ':attribute perlu diisi ketika :other bernilai :value.',
+    'same' => ':attribute harus sama dengan :other.',
+    'starts_with' => ':attribute harus diawali dengan salah satu format berikut: :values.',
+    'string' => ':attribute harus berupa teks.',
+    'unique' => ':attribute tersebut sudah digunakan. Silakan gunakan nilai lain.',
+    'uploaded' => ':attribute belum berhasil diunggah. Silakan coba lagi.',
+    'url' => 'Alamat :attribute belum menggunakan format URL yang valid.',
+    'uuid' => ':attribute harus berupa UUID yang valid.',
+
+    'attributes' => [
+        'telegram_webhook_url' => 'Webhook URL',
+        'telegram_webhook_secret' => 'webhook secret',
+        'telegram_timeout' => 'waktu tunggu Telegram',
+    ],
+];

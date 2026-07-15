@@ -33,6 +33,11 @@ class PromptTemplateResource extends Resource
 
     protected static ?int $navigationSort = 50;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->hasRole('content_reviewer') ?? false;
+    }
+
     public static function canCreate(): bool
     {
         return false;

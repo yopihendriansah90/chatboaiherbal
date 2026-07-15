@@ -31,6 +31,11 @@ class BusinessProfileResolver
         }
     }
 
+    public function currentOrFail(): BusinessProfile
+    {
+        return $this->current() ?? throw new \RuntimeException('Business profile aktif belum tersedia.');
+    }
+
     public function enabledDomains(): array
     {
         $business = $this->current();

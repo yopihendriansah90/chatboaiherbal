@@ -19,6 +19,8 @@ class ChatbotContact extends Model
         'admin_notes',
         'first_seen_at',
         'last_seen_at',
+        'memory_consented_at',
+        'memory_consent_revoked_at',
     ];
 
     protected static function booted(): void
@@ -33,6 +35,8 @@ class ChatbotContact extends Model
         return [
             'first_seen_at' => 'datetime',
             'last_seen_at' => 'datetime',
+            'memory_consented_at' => 'datetime',
+            'memory_consent_revoked_at' => 'datetime',
         ];
     }
 
@@ -54,5 +58,10 @@ class ChatbotContact extends Model
             'chatbot_contact_id',
             'chatbot_conversation_id',
         );
+    }
+
+    public function memories(): HasMany
+    {
+        return $this->hasMany(CustomerMemory::class);
     }
 }

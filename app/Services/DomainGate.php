@@ -14,16 +14,6 @@ class DomainGate
         'ejakulasi', 'ereksi', 'libido', 'seksual', 'kejantanan', 'impoten',
     ];
 
-    private const COMMON_HEALTH_TYPOS = [
-        'sakti' => 'sakit',
-        'skit' => 'sakit',
-        'sakitt' => 'sakit',
-        'nyri' => 'nyeri',
-        'purt' => 'perut',
-        'lmbung' => 'lambung',
-        'pusingg' => 'pusing',
-    ];
-
     private const OFF_TOPIC_PATTERNS = [
         'resep makanan', 'resep minuman', 'resep es ', 'es doger', 'masak ', 'cara memasak',
         'buatkan kode', 'coding', 'programming', 'berita politik', 'ramalan', 'puisi',
@@ -33,6 +23,11 @@ class DomainGate
         'abaikan aturan', 'abaikan instruksi', 'ignore previous', 'ignore instruction',
         'system prompt', 'berpura-pura menjadi', 'jailbreak',
     ];
+
+    public function __construct(private ?IndonesianTypoNormalizer $typos = null)
+    {
+        $this->typos ??= new IndonesianTypoNormalizer;
+    }
 
     public function isClearlyOffTopic(string $message): bool
     {
@@ -49,11 +44,7 @@ class DomainGate
 
     public function hasHealthSignal(string $message): bool
     {
-        $normalized = mb_strtolower($message);
-        $normalized = preg_replace('/[^\pL\pN]+/u', ' ', $normalized) ?? $normalized;
-        $tokens = preg_split('/\s+/u', trim($normalized)) ?: [];
-        $tokens = array_map(fn (string $token): string => self::COMMON_HEALTH_TYPOS[$token] ?? $token, $tokens);
-        $normalized = ' '.implode(' ', $tokens).' ';
+        $normalized = ' '.$this->typos->normalize($message).' ';
 
         foreach (self::HEALTH_SIGNALS as $signal) {
             if (preg_match('/\b'.preg_quote($signal, '/').'(?:nya|ku|mu)?\b/u', $normalized)) {

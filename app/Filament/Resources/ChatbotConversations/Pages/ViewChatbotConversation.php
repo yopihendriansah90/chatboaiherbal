@@ -21,7 +21,7 @@ class ViewChatbotConversation extends ViewRecord
     public function conversation(): ChatbotConversation
     {
         return ChatbotConversation::query()
-            ->with(['contact', 'identity', 'messages'])
+            ->with(['contact', 'identity', 'messages', 'assignee', 'notes.user', 'events.user'])
             ->findOrFail($this->getRecord()->getKey());
     }
 

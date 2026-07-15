@@ -21,6 +21,7 @@ class TelegramWebhookTest extends TestCase
             'chatbot.renderer_provider' => 'groq',
             'chatbot.parser_fallback_enabled' => false,
             'chatbot.natural_renderer' => false,
+            'chatbot.history_enabled' => false,
             'cache.default' => 'array',
         ]);
         Cache::clear();
@@ -67,6 +68,52 @@ class TelegramWebhookTest extends TestCase
         $this->assertTelegramTextContains('Halo kak');
 
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
+    public function test_product_request_for_mother_remembers_subject_and_asks_only_her_complaint_with_empathy(): void
+    {
+        $parserResponses = Http::sequence()
+            ->push(['choices' => [['message' => ['content' => json_encode($this->parsed('health', 'high', 'unsupported_health', [
+                'subject' => 'dia', 'sex' => null, 'complaint' => 'pusing',
+                'age_group' => null, 'pregnancy' => null, 'allergies' => null,
+                'conditions' => null, 'medications' => null, 'duration' => null, 'red_flags' => null,
+            ]))]]]]);
+        Http::fake([
+            'api.groq.com/*' => $parserResponses,
+            'api.telegram.org/*' => Http::response(['ok' => true]),
+        ]);
+
+        $this->send(301, 'Tolong carikan herbal untuk ibu saya.')->assertOk();
+
+        $this->assertTelegramTextContains('aku bantu pelan-pelan untuk ibu kakak');
+        $this->assertTelegramTextContains('keluhan utama');
+        $this->assertTelegramTextNotContains('siapa yang mengalaminya');
+
+        $state = app(ConversationStore::class)->get(12345);
+        $this->assertSame('ibu', $state['facts']['subject']);
+        $this->assertSame('wanita', $state['facts']['sex']);
+        $this->assertTrue($state['facts']['product_requested']);
+        $this->assertSame(['complaint'], $state['missing_fields']);
+        $this->assertSame('screening', $state['phase']);
+
+        $this->send(302, 'dia pusing pusing')->assertOk();
+
+        $reply = Http::recorded()
+            ->filter(fn (array $record): bool => str_contains($record[0]->url(), 'sendMessage'))
+            ->map(fn (array $record): string => (string) $record[0]['text'])
+            ->last();
+        $this->assertIsString($reply);
+        $this->assertStringContainsString('keluhan yang dialami ibu kakak', $reply);
+        $this->assertStringContainsString('usia ibu kakak', $reply);
+        $this->assertStringNotContainsString('usia kakak dan', $reply);
+        $this->assertStringNotContainsString('laki-laki atau perempuan', $reply);
+
+        $state = app(ConversationStore::class)->get(12345);
+        $this->assertSame('ibu', $state['facts']['subject']);
+        $this->assertSame('wanita', $state['facts']['sex']);
+        $this->assertSame('pusing', $state['facts']['complaint']);
+        $this->assertTrue($state['facts']['product_requested']);
+        $this->assertSame(['age_group'], $state['missing_fields']);
     }
 
     public function test_casual_catalog_question_lists_every_active_product_without_ai(): void
@@ -167,9 +214,23 @@ class TelegramWebhookTest extends TestCase
 
         foreach ($messages as $index => $message) {
             $this->send(360 + $index, $message)->assertOk();
-            $this->assertTelegramTextContains('Tentu boleh dong');
+            $this->assertTelegramTextContains(
+                str_contains($message, 'konsul') ? 'Tentu bisa' : 'Tentu boleh dong',
+            );
         }
 
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
+    public function test_explicit_consultation_opener_starts_warmly_without_ai(): void
+    {
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true]), '*' => Http::response([], 500)]);
+
+        $this->send(371, 'apakah bisa konsultasi dulu')->assertOk();
+
+        $this->assertTelegramTextContains('Tentu bisa');
+        $this->assertTelegramTextContains('untuk kakak sendiri atau orang lain');
+        $this->assertTelegramTextNotContains('aku fokus membantu informasi tentang Walatra');
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
     }
 
@@ -221,6 +282,162 @@ class TelegramWebhookTest extends TestCase
         $this->assertTelegramTextContains('muntah darah');
         $this->assertTelegramTextNotContains('aku fokus membantu informasi tentang Walatra');
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
+    public function test_positive_red_flag_followup_enters_emergency_instead_of_repeating_question(): void
+    {
+        $store = app(ConversationStore::class);
+        $state = $store->fresh();
+        $state['active_domain'] = 'health_herbal';
+        $state['phase'] = 'screening';
+        $state['facts'] = array_replace($state['facts'], [
+            'subject' => 'kakak', 'complaint' => 'mual', 'category' => 'digestion',
+            'duration' => '2 hari', 'red_flags' => null, 'product_requested' => true,
+        ]);
+        $state['missing_fields'] = ['red_flags'];
+        $store->put(12345, $state);
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+
+        $this->send(531, 'iya nyeri hebat')->assertOk();
+
+        $this->assertTelegramTextContains('perlu diperiksa segera');
+        $this->assertTelegramTextContains('IGD');
+        $this->assertTelegramTextNotContains('aku catat durasinya');
+        $this->assertTelegramTextNotContains('Apakah ada nyeri hebat');
+        $this->assertSame('emergency', $store->get(12345)['phase']);
+        $this->assertSame('nyeri hebat', $store->get(12345)['facts']['red_flags']);
+        $this->assertSame('block', $store->get(12345)['last_decision']['action']);
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
+    public function test_typo_in_negative_red_flag_answer_is_saved_without_repeating_question(): void
+    {
+        $store = app(ConversationStore::class);
+        $state = $store->fresh();
+        $state['active_domain'] = 'health_herbal';
+        $state['phase'] = 'screening';
+        $state['facts'] = array_replace($state['facts'], [
+            'subject' => 'diri sendiri', 'complaint' => 'nyeri lutut', 'category' => 'joints',
+            'age_group' => 'dewasa', 'age_years' => 35,
+            'duration' => 'sudah lama sekali hampir setiap hari', 'red_flags' => null,
+            'product_requested' => true,
+        ]);
+        $state['missing_fields'] = ['red_flags'];
+        $store->put(12345, $state);
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+
+        $this->send(533, 'tidka ada')->assertOk();
+
+        $this->assertSame('tidak ada', $store->get(12345)['facts']['red_flags']);
+        $this->assertTelegramTextContains('alergi');
+        $this->assertTelegramTextNotContains('pernah cedera');
+        $this->assertTelegramTextNotContains('kesulitan menapak');
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
+    public function test_daily_frequency_followup_is_saved_without_repeating_the_question(): void
+    {
+        $store = app(ConversationStore::class);
+        $state = $store->fresh();
+        $state['active_domain'] = 'health_herbal';
+        $state['phase'] = 'screening';
+        $state['facts'] = array_replace($state['facts'], [
+            'subject' => 'teman', 'sex' => 'pria',
+            'complaint' => 'ejakulasi terasa terlalu cepat saat hubungan intim',
+            'category' => 'male_vitality', 'age_group' => '25 tahun', 'age_years' => 25,
+            'duration' => 'lebih dari 2 bulan', 'frequency' => null, 'product_requested' => true,
+        ]);
+        $state['missing_fields'] = ['frequency'];
+        $store->put(12345, $state);
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+
+        $this->send(532, 'setiap hari')->assertOk();
+
+        $this->assertSame('setiap hari', $store->get(12345)['facts']['frequency']);
+        $this->assertTelegramTextContains('alergi');
+        $this->assertTelegramTextNotContains('hampir setiap kali berhubungan');
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
+    public function test_positive_medication_answer_is_saved_locally_and_requires_consultation(): void
+    {
+        $store = app(ConversationStore::class);
+        $state = $store->fresh();
+        $state['active_domain'] = 'health_herbal';
+        $state['phase'] = 'screening';
+        $state['facts'] = array_replace($state['facts'], $this->completeFacts([
+            'subject' => 'teman', 'sex' => 'pria',
+            'complaint' => 'ejakulasi terasa terlalu cepat saat hubungan intim',
+            'category' => 'male_vitality', 'age_group' => '25 tahun', 'age_years' => 25,
+            'duration' => 'lebih dari 2 bulan', 'frequency' => 'setiap hari',
+            'medications' => null, 'product_requested' => true,
+        ]));
+        $state['missing_fields'] = ['medications'];
+        $store->put(12345, $state);
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+
+        $this->send(533, 'ada obat amlodifin')->assertOk();
+
+        $this->assertSame('amlodipin', $store->get(12345)['facts']['medications']);
+        $this->assertSame('consult', $store->get(12345)['last_decision']['action']);
+        $this->assertTelegramTextContains('kemungkinan maksudnya amlodipin');
+        $this->assertTelegramTextContains('dokter atau apoteker');
+        $this->assertTelegramTextContains('Opsi pendamping untuk dikonsultasikan');
+        $this->assertTelegramTextContains('Kopi Radimax');
+        $this->assertTelegramTextContains('Belum untuk langsung diminum');
+        $this->assertTelegramTextNotContains('aku fokus membantu informasi tentang Walatra');
+        $this->assertTelegramTextNotContains('Aturan pakai');
+        $this->assertTelegramTextNotContains('shopee.co.id');
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
+    public function test_complete_indonesian_consultation_keeps_context_and_soft_sells_safely_with_doctor_medication(): void
+    {
+        $this->fakeParser($this->parsed('health', 'high', 'joints', [
+            'subject' => 'dia', 'sex' => null,
+            'complaint' => 'lutut sakit dan pegal saat berjalan',
+            'age_group' => null, 'pregnancy' => null, 'allergies' => null,
+            'conditions' => null, 'medications' => null, 'duration' => null,
+            'red_flags' => null,
+        ]));
+
+        $this->send(1001, 'halo min')->assertOk();
+        $this->send(1002, 'mau konsul dong')->assertOk();
+        $this->send(1003, 'buat ibu sy')->assertOk();
+        $this->assertTelegramTextContains('keluhan utama yang sedang dirasakan ibu kakak');
+
+        $this->send(1004, 'lututnya skit sama pegel kalo jalan')->assertOk();
+        $this->assertTelegramTextContains('pernah cedera');
+
+        $this->send(1005, 'udh 3 bln')->assertOk();
+        $this->assertTelegramTextContains('aku catat durasinya');
+        $this->send(1006, 'tidka ada')->assertOk();
+        $this->assertTelegramTextContains('usia ibu kakak');
+
+        $this->send(1007, '58')->assertOk();
+        $this->assertTelegramTextContains('alergi');
+        $this->send(1008, 'darah tinggi, minum amlodifin')->assertOk();
+        $this->assertTelegramTextContains('kemungkinan maksudnya amlodipin');
+        $this->send(1009, 'ga ada alergi')->assertOk();
+
+        $state = app(ConversationStore::class)->get(12345);
+        $this->assertSame('ibu', $state['facts']['subject']);
+        $this->assertSame('58 tahun', $state['facts']['age_group']);
+        $this->assertSame(58, $state['facts']['age_years']);
+        $this->assertSame('darah tinggi', $state['facts']['conditions']);
+        $this->assertSame('amlodipin', $state['facts']['medications']);
+        $this->assertSame('consult', $state['last_decision']['action']);
+        $this->assertSame('SML', $state['last_decision']['product_code']);
+        $this->assertTelegramTextContains('Samulinpro Sehat Sendi');
+        $this->assertTelegramTextContains('Belum untuk langsung diminum');
+        $this->assertTelegramTextNotContains('Aturan pakai');
+
+        $this->send(1010, 'jadi ga boleh minum herbal?')->assertOk();
+        $this->assertTelegramTextContains('Bukan berarti pasti tidak boleh');
+        $this->assertTelegramTextContains('Jangan hentikan atau mengubah obat dokter');
+
+        $this->send(1011, 'harganya brp min')->assertOk();
+        $this->assertTelegramTextContains('harga aktif Samulinpro Sehat Sendi');
     }
 
     public function test_emergency_uses_local_template_without_product(): void
@@ -427,7 +644,8 @@ class TelegramWebhookTest extends TestCase
 
         $this->assertTelegramTextContains('ada alergi, penyakit tertentu, atau obat yang rutin diminum nggak');
         $this->send(131, 'tidak ada')->assertOk();
-        $this->assertTelegramTextContains('Keloreena');
+        $this->assertTelegramTextContains('belum ada produk dalam katalog yang memiliki klaim aktif');
+        $this->assertTelegramTextNotContains('Keloreena');
         $this->assertSame(1, $index, 'Jawaban screening pendek harus diproses lokal tanpa panggilan AI tambahan.');
         $state = app(ConversationStore::class)->get(12345);
         $this->assertSame('27 tahun', $state['facts']['age_group']);
@@ -561,6 +779,32 @@ class TelegramWebhookTest extends TestCase
         Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
     }
 
+    public function test_unsupported_product_claim_and_alternative_are_rejected_honestly(): void
+    {
+        $store = app(ConversationStore::class);
+        $state = $store->fresh();
+        $state['active_domain'] = 'health_herbal';
+        $state['phase'] = 'recommendation';
+        $state['facts'] = array_replace($state['facts'], $this->completeFacts([
+            'subject' => 'ibu', 'sex' => 'wanita', 'complaint' => 'pusing',
+            'category' => 'unsupported_health', 'age_group' => '53 tahun',
+            'product_requested' => true,
+        ]));
+        $state['offered_products'] = ['KLR'];
+        $store->put(12345, $state);
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
+
+        $this->send(156, 'apakah bisa mengobati pusing pusing?')->assertOk();
+        $this->assertTelegramTextContains('tidak ditujukan untuk mengobati atau mengatasi pusing');
+        $this->assertTelegramTextContains('pemenuhan nutrisi, antioksidan, dan kebugaran tubuh');
+        $this->assertTelegramTextNotContains('Ada, kak');
+
+        $this->send(157, 'selain ini apakah ada rekomendasi lain?')->assertOk();
+        $this->assertTelegramTextContains('belum ada produk lain di katalog yang memiliki klaim aktif');
+        $this->assertTelegramTextContains('tidak mau memilihkan alternatif secara asal');
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
     public function test_explicit_male_vitality_product_question_starts_safe_screening(): void
     {
         config(['chatbot.natural_renderer' => true]);
@@ -608,6 +852,50 @@ class TelegramWebhookTest extends TestCase
 
         $this->assertTelegramTextContains('aku fokus membantu informasi tentang Walatra');
         $this->assertTelegramTextNotContains('usia kakak');
+    }
+
+    public function test_sange_without_health_complaint_gets_contextual_boundary_response(): void
+    {
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true]), '*' => Http::response([], 500)]);
+
+        $this->send(164, 'aku lagi sange nih')->assertOk();
+
+        $this->assertTelegramTextContains('Kalau hanya ingin melakukan percakapan seksual');
+        $this->assertTelegramTextContains('aku bantu tanpa menghakimi');
+        $this->assertTelegramTextNotContains('Kopi Radimax');
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
+    }
+
+    public function test_radimax_training_guardrails_are_applied_before_ai_and_product_details(): void
+    {
+        Http::fake(['api.telegram.org/*' => Http::response(['ok' => true]), '*' => Http::response([], 500)]);
+        $store = app(ConversationStore::class);
+
+        $this->send(1701, 'Radimax bisa bikin titit tambah gede gak?')->assertOk();
+        $this->assertTelegramTextContains('tidak ditujukan untuk membesarkan organ intim');
+
+        $store->forget(12345);
+        $this->send(1702, 'Bisa dicampur ke minuman suami diam-diam biar kuat?')->assertOk();
+        $this->assertTelegramTextContains('tanpa sepengetahuan dan persetujuannya');
+
+        $store->forget(12345);
+        $this->send(1703, 'Perlu saya kirim foto kontol biar dicek?')->assertOk();
+        $this->assertTelegramTextContains('jangan mengirim foto organ intim');
+
+        $store->forget(12345);
+        $this->send(1704, 'Min mau beli Radimax satu.')->assertOk();
+        $this->assertTelegramTextContains('memastikan produk ini sesuai dan aman');
+        $state = $store->get(12345);
+        $this->assertSame('screening', $state['phase']);
+        $this->assertSame('male_vitality', $state['facts']['category']);
+        $this->assertSame('RAD', $state['catalog_context']['selected_product_code']);
+
+        $store->forget(12345);
+        $this->send(1705, 'Kalau lagi hubungan dada saya sakit dan sesak, Radimax bantu gak?')->assertOk();
+        $this->assertTelegramTextContains('perlu diperiksa segera');
+        $this->assertTelegramTextNotContains('Kopi Radimax dapat membantu');
+
+        Http::assertNotSent(fn ($request) => str_contains($request->url(), 'api.groq.com'));
     }
 
     public function test_switching_from_self_to_sibling_clears_old_screening_and_does_not_recommend_immediately(): void
@@ -683,7 +971,7 @@ class TelegramWebhookTest extends TestCase
         $store = app(ConversationStore::class);
         Http::fake(['api.telegram.org/*' => Http::response(['ok' => true])]);
 
-        foreach (['tidak ada sih', 'nggak ada kok, kak', 'kayaknya nggak ada', 'ga punya sih', 'enggak ada sama sekali 😊', 'engga ada kak', 'gaada kak', 'ngak ada min'] as $index => $answer) {
+        foreach (['tidak ada sih', 'nggak ada kok, kak', 'kayaknya nggak ada', 'ga punya sih', 'enggak ada sama sekali 😊', 'engga ada kak', 'gaada kak', 'ngak ada min', 'tidka ada', 'tdiak ada'] as $index => $answer) {
             $state = $store->fresh();
             $state['phase'] = 'screening';
             $state['facts'] = array_replace($state['facts'], [

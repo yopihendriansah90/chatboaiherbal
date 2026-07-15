@@ -17,18 +17,7 @@ use Tests\TestCase;
 
 class ConversationExportTest extends TestCase
 {
-    use RefreshDatabase {
-        refreshDatabase as performRefreshDatabase;
-    }
-
-    public function refreshDatabase(): void
-    {
-        if (! extension_loaded('pdo_sqlite')) {
-            $this->markTestSkipped('Ekstensi pdo_sqlite diperlukan untuk pengujian database in-memory.');
-        }
-
-        $this->performRefreshDatabase();
-    }
+    use RefreshDatabase;
 
     protected function setUp(): void
     {

@@ -13,5 +13,10 @@ class EmergencyDetectorTest extends TestCase
 
         $this->assertTrue($detector->detects('Saya mengalami nyeri dada dan sesak berat'));
         $this->assertFalse($detector->detects('Perut agak kembung sejak tadi pagi'));
+        $this->assertTrue($detector->detectsScreeningAnswer('iya nyeri hebat'));
+        $this->assertFalse($detector->detectsScreeningAnswer('tidak ada nyeri hebat'));
+        $this->assertTrue($detector->detects('Saya muntah darha dan seska berat'));
+        $this->assertTrue($detector->detectsScreeningAnswer('iya nyri hebattt'));
+        $this->assertFalse($detector->detectsScreeningAnswer('tidka ada nyri hebattt'));
     }
 }

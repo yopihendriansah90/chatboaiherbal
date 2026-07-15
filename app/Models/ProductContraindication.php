@@ -10,6 +10,6 @@ class ProductContraindication extends Model
 
     protected function casts(): array
     {
-        return ['is_active' => 'boolean'];
+        return ['reviewed_at' => 'datetime', 'is_active' => 'boolean'];
     }
 }

@@ -38,6 +38,9 @@ class ConversationManager
                 'channel' => $identity->channel,
                 'external_conversation_id' => $externalConversationId,
                 'status' => 'active',
+                'service_status' => 'bot_active',
+                'bot_mode' => 'automatic',
+                'priority' => 'normal',
                 'started_at' => now(),
                 'last_message_at' => now(),
             ]);

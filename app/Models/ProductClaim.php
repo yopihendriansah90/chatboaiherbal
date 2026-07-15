@@ -10,6 +10,6 @@ class ProductClaim extends Model
 
     protected function casts(): array
     {
-        return ['effective_from' => 'datetime', 'effective_until' => 'datetime', 'is_active' => 'boolean'];
+        return ['effective_from' => 'datetime', 'effective_until' => 'datetime', 'reviewed_at' => 'datetime', 'is_active' => 'boolean'];
     }
 }

@@ -26,7 +26,7 @@ class RecommendationRulesRelationManager extends RelationManager
             Select::make('product_id')->label('Produk')->options(Product::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))->searchable()->required(),
             TextInput::make('priority')->label('Prioritas')->numeric()->minValue(1)->default(10)->required(),
             TextInput::make('minimum_age')->label('Usia minimum')->numeric()->minValue(0),
-            TextInput::make('maximum_age')->label('Usia maksimum')->numeric()->minValue(0),
+            TextInput::make('maximum_age')->label('Usia maksimum')->numeric()->minValue(0)->gte('minimum_age'),
             Select::make('subject_type')->label('Subjek')->options(['adult' => 'Dewasa', 'child' => 'Anak', 'senior' => 'Lansia'])->nullable(),
             Toggle::make('is_fallback')->label('Produk fallback'), Toggle::make('is_active')->label('Aktif')->default(true),
         ]);

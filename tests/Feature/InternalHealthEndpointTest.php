@@ -39,7 +39,7 @@ class InternalHealthEndpointTest extends TestCase
             ->assertJsonPath('checks.cache', 'ok')
             ->assertJsonPath('ai.parser.model', 'openai/gpt-oss-20b')
             ->assertJsonPath('ai.renderer.model', 'qwen/qwen3.6-27b')
-            ->assertJsonPath('conversation.state_version', 'v3')
+            ->assertJsonPath('conversation.state_version', 'v5-durable')
             ->assertJsonPath('catalog.products', 24)
             ->assertJsonPath('telegram.webhook.host', 'internal.example.test');
 

@@ -6,6 +6,7 @@ use App\Models\ChatbotChannelIdentity;
 use App\Models\ChatbotContact;
 use App\Models\ChatbotConversation;
 use App\Models\ChatbotMessage;
+use App\Models\ConsultationCase;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
@@ -15,18 +16,7 @@ use Tests\TestCase;
 
 class ChatbotPersistenceTest extends TestCase
 {
-    use RefreshDatabase {
-        refreshDatabase as performRefreshDatabase;
-    }
-
-    public function refreshDatabase(): void
-    {
-        if (! extension_loaded('pdo_sqlite')) {
-            $this->markTestSkipped('Ekstensi pdo_sqlite diperlukan untuk pengujian database in-memory.');
-        }
-
-        $this->performRefreshDatabase();
-    }
+    use RefreshDatabase;
 
     protected function setUp(): void
     {
@@ -102,6 +92,25 @@ class ChatbotPersistenceTest extends TestCase
         $this->assertTrue($conversation->is_emergency);
         $this->assertSame('safety', $conversation->domain_code);
         $this->assertNull($conversation->product_code);
+    }
+
+    public function test_consultation_opener_creates_one_durable_case_and_links_messages(): void
+    {
+        $this->send($this->messagePayload(1010, 'apakah bisa konsultasi dulu'))->assertOk();
+
+        $case = ConsultationCase::query()->firstOrFail();
+        $this->assertSame('active', $case->status);
+        $this->assertSame('identify_subject', $case->phase);
+        $this->assertNull($case->facts['subject']);
+        $this->assertNull($case->facts['complaint']);
+        $this->assertSame(1, $case->case_number);
+        $this->assertSame(2, ChatbotMessage::query()->where('consultation_case_id', $case->id)->count());
+        $rawFacts = DB::table('consultation_cases')->where('id', $case->id)->value('facts');
+        $this->assertNotSame(json_encode($case->facts), $rawFacts);
+        $this->assertDatabaseHas('conversation_events', [
+            'consultation_case_id' => $case->id,
+            'type' => 'consultation_started',
+        ]);
     }
 
     public function test_admin_can_open_contact_and_conversation_monitoring_pages(): void

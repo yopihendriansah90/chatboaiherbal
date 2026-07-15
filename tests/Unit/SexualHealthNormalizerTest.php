@@ -22,6 +22,8 @@ class SexualHealthNormalizerTest extends TestCase
             'alat vital saya susah berdiri' => ['erection_difficulty', 'kesulitan mendapatkan atau mempertahankan ereksi'],
             'kalau main sama istri cuma kuat sebentar' => ['sexual_endurance', 'ingin mendukung stamina saat hubungan intim'],
             'aku males berhubungan' => ['low_libido', 'gairah seksual menurun'],
+            'kontol gue suka loyo pas mau ngentot' => ['sexual_endurance', 'ingin mendukung stamina saat hubungan intim'],
+            'sy 38th klo hb sm istri cpt kluar' => ['early_ejaculation', 'ejakulasi terasa terlalu cepat saat hubungan intim'],
         ];
 
         foreach ($cases as $message => [$issue, $complaint]) {

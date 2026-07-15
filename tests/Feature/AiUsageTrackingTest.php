@@ -16,18 +16,7 @@ use Tests\TestCase;
 
 class AiUsageTrackingTest extends TestCase
 {
-    use RefreshDatabase {
-        refreshDatabase as performRefreshDatabase;
-    }
-
-    public function refreshDatabase(): void
-    {
-        if (! extension_loaded('pdo_sqlite')) {
-            $this->markTestSkipped('Ekstensi pdo_sqlite diperlukan untuk pengujian database in-memory.');
-        }
-
-        $this->performRefreshDatabase();
-    }
+    use RefreshDatabase;
 
     public function test_groq_usage_is_costed_with_manual_price_and_exchange_rate_snapshot(): void
     {

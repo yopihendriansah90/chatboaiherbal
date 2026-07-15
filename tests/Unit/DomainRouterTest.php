@@ -26,6 +26,8 @@ class DomainRouterTest extends TestCase
     {
         $this->assertSame('company_profile', $this->router()->local('Alamat kantor Walatra di mana?'));
         $this->assertSame('health_herbal', $this->router()->local('Saya sedang sakit lutut'));
+        $this->assertSame('health_herbal', $this->router()->local('Ibu pusign dan muall'));
+        $this->assertSame('company_profile', $this->router()->local('Alamt dan instgram Walatra'));
     }
 
     public function test_prompt_injection_is_stopped_locally(): void

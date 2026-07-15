@@ -31,6 +31,11 @@ class AiProviderResource extends Resource
 
     protected static ?int $navigationSort = 80;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return AiProviderForm::configure($schema);

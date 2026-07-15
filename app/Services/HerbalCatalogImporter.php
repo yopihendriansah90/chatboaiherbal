@@ -20,8 +20,7 @@ class HerbalCatalogImporter
         bool $dryRun = false,
         bool $updateExisting = false,
         bool $replaceExisting = false,
-    ): array
-    {
+    ): array {
         $path ??= (string) config('chatbot.catalog_path');
         if (! is_readable($path)) {
             throw new RuntimeException('File katalog herbal tidak dapat dibaca.');
@@ -144,6 +143,7 @@ class HerbalCatalogImporter
                 $this->syncContraindications($product, $source);
 
                 $product->categories()->sync([]);
+                $product->recommendationRules()->delete();
 
                 foreach ((array) config('herbal_rules.categories') as $categoryCode => $codes) {
                     $position = array_search($code, array_values($codes), true);

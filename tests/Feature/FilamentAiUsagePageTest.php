@@ -8,18 +8,7 @@ use Tests\TestCase;
 
 class FilamentAiUsagePageTest extends TestCase
 {
-    use RefreshDatabase {
-        refreshDatabase as performRefreshDatabase;
-    }
-
-    public function refreshDatabase(): void
-    {
-        if (! extension_loaded('pdo_sqlite')) {
-            $this->markTestSkipped('Ekstensi pdo_sqlite diperlukan untuk pengujian database in-memory.');
-        }
-
-        $this->performRefreshDatabase();
-    }
+    use RefreshDatabase;
 
     public function test_usage_configuration_and_report_pages_are_admin_only(): void
     {

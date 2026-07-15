@@ -11,6 +11,9 @@ interface MessagingChannel
 {
     public function key(): string;
 
+    /** @return array{text:bool,buttons:bool,media:bool,typing:bool,delivery_receipts:bool,max_text_length:int} */
+    public function capabilities(): array;
+
     public function normalize(array $payload): ?InboundMessage;
 
     public function normalizeStatus(array $payload): ?ChannelIdentityStatus;

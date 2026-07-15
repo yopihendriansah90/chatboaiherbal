@@ -32,11 +32,13 @@
                     <h2>{{ $conversation->contact->display_name }}</h2>
                     <span class="chat-channel-badge">{{ ucfirst($conversation->channel) }}</span>
                     <span @class(['chat-status-badge', 'is-active' => $conversation->status === 'active'])>
-                        {{ match ($conversation->status) {
-                            'active' => 'Aktif',
-                            'reset' => 'Di-reset',
-                            'completed' => 'Selesai',
-                            default => ucfirst($conversation->status),
+                        {{ match ($conversation->service_status) {
+                            'bot_active' => 'Ditangani bot',
+                            'waiting_agent' => 'Menunggu agen',
+                            'assigned' => 'Ditangani agen',
+                            'waiting_customer' => 'Menunggu pelanggan',
+                            'resolved' => 'Selesai',
+                            default => ucfirst($conversation->service_status),
                         } }}
                     </span>
                 </div>
@@ -50,6 +52,9 @@
                     @if ($conversation->last_message_at)
                         <span>Terakhir {{ $conversation->last_message_at->diffForHumans() }}</span>
                     @endif
+                    @if ($conversation->assignee)
+                        <span>Agen: {{ $conversation->assignee->name }}</span>
+                    @endif
                 </div>
             </div>
 
@@ -62,6 +67,12 @@
                 @endif
                 @if ($conversation->is_emergency)
                     <span class="is-emergency">Tanda darurat</span>
+                @endif
+                @foreach ($conversation->tags ?? [] as $tag)
+                    <span>#{{ $tag }}</span>
+                @endforeach
+                @if ($conversation->sla_due_at)
+                    <span>SLA {{ $conversation->sla_due_at->diffForHumans() }}</span>
                 @endif
             </div>
         </section>
@@ -93,7 +104,7 @@
                         @php($incoming = $message->direction === 'incoming')
                         <article @class(['chat-row', 'is-user' => $incoming, 'is-bot' => ! $incoming])>
                             <div class="chat-bubble">
-                                <div class="chat-sender">{{ $incoming ? $conversation->contact->display_name : 'Chatbot Herbal' }}</div>
+                                <div class="chat-sender">{{ $incoming ? $conversation->contact->display_name : (($message->metadata['source'] ?? null) === 'agent' ? 'Customer Service' : 'Chatbot Herbal') }}</div>
                                 <div class="chat-text">{!! $this->formattedMessage($message->content) !!}</div>
                                 <div class="chat-message-meta">
                                     <time title="{{ $message->occurred_at->format('d M Y H:i:s') }}">
@@ -127,6 +138,25 @@
                 @endforelse
             </div>
         </section>
+
+        @if ($conversation->notes->isNotEmpty() || $conversation->events->isNotEmpty())
+            <section class="chat-audit-grid">
+                <div class="chat-audit-card">
+                    <strong>Catatan internal</strong>
+                    @forelse ($conversation->notes->sortByDesc('id') as $note)
+                        <p>{{ $note->content }} <small>— {{ $note->user?->name ?? 'Sistem' }}, {{ $note->created_at->format('d M H:i') }}</small></p>
+                    @empty
+                        <p>Belum ada catatan.</p>
+                    @endforelse
+                </div>
+                <div class="chat-audit-card">
+                    <strong>Audit tindakan</strong>
+                    @foreach ($conversation->events->sortByDesc('occurred_at')->take(20) as $event)
+                        <p>{{ str($event->type)->replace('_', ' ')->title() }} <small>— {{ $event->user?->name ?? 'Sistem' }}, {{ $event->occurred_at->format('d M H:i') }}</small></p>
+                    @endforeach
+                </div>
+            </section>
+        @endif
     </div>
 
     <style>
@@ -174,11 +204,17 @@
         .chat-error { margin-top: .25rem; font-size: .68rem; }
         .chat-empty { min-height: 25rem; display: grid; place-content: center; text-align: center; color: rgb(107 114 128); }
         .chat-empty span { display: block; margin-top: .25rem; font-size: .8rem; }
+        .chat-audit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+        .chat-audit-card { padding: 1rem; border: 1px solid rgba(127, 127, 127, .22); border-radius: 1rem; background: var(--gray-50, #fff); }
+        .chat-audit-card p { margin: .65rem 0 0; font-size: .82rem; }
+        .chat-audit-card small { color: rgb(107 114 128); }
+        .dark .chat-audit-card { background: rgb(24 24 27); border-color: rgb(63 63 70); }
         @media (max-width: 768px) {
             .chat-profile-card { align-items: flex-start; flex-wrap: wrap; }
             .chat-summary-tags { max-width: none; width: 100%; justify-content: flex-start; padding-left: 4rem; }
             .chat-messages { min-height: 28rem; max-height: calc(100vh - 18rem); padding: .75rem; }
             .chat-bubble { max-width: 88%; }
+            .chat-audit-grid { grid-template-columns: 1fr; }
         }
     </style>
 </x-filament-panels::page>

@@ -9,6 +9,7 @@
         "php": "^8.2",
         "filament/filament": "^4.0",
         "laravel/framework": "^12.0",
+        "laravel/horizon": "^5.47",
         "laravel/tinker": "^2.10.1"
     },
     "require-dev": {
@@ -43,11 +44,15 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1 --timeout=0\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan horizon\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
         ],
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "test:mysql": [
+            "@php artisan config:clear --ansi",
+            "@php vendor/bin/phpunit -c phpunit.mysql.xml"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",

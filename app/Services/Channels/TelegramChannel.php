@@ -22,6 +22,18 @@ class TelegramChannel implements MessagingChannel
         return 'telegram-primary';
     }
 
+    public function capabilities(): array
+    {
+        return [
+            'text' => true,
+            'buttons' => true,
+            'media' => true,
+            'typing' => true,
+            'delivery_receipts' => false,
+            'max_text_length' => 4096,
+        ];
+    }
+
     public function normalize(array $payload): ?InboundMessage
     {
         $message = data_get($payload, 'message');
